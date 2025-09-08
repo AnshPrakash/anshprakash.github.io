@@ -1,4 +1,4 @@
 User-agent: *
 Disallow:
 
-Sitemap: https://anshprakash.github.io/MimicPlay/sitemap.xml
+Sitemap: https://anshprakash.github.io/sitemap.xml
