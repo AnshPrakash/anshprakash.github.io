@@ -2,12 +2,13 @@
 layout: distill
 title: MimicPlay on Franka Arm and its Extension
 description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.
-tags: Imitation Learning, Learning from Human, Long-Horizon Manipulation
+tags: Imitation-Learning, Learning-from-Human, Long-Horizon-Manipulation
 date: 2025-09-08
 citation: true
 related_publications: true
 related_posts: false
 giscus_comments: false
+
 
 authors:
   - name: Ansh Prakash

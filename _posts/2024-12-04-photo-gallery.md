@@ -11,6 +11,8 @@ images:
   photoswipe: true
   spotlight: true
   venobox: true
+published: false
+
 ---
 
 The images in this post are all zoomable, arranged into different mini-galleries using different libraries.
