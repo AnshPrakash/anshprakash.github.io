@@ -72,7 +72,18 @@ ninja.data = [{
               handler: () => {
                 window.location.href = "/blog/";
               },
-            },{id: "post-a-post-with-plotly-js",
+            },{id: "post-mimic-play-on-franka-single-arm-and-its-extension",
+        
+          title: "Mimic Play on Franka Single Arm and its Extension",
+        
+        description: "Replicating MimicPlay on a real one arm robot, and its extension to  bi-manual robot",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2025/mimicplay/";
+          
+        },
+      },{id: "post-a-post-with-plotly-js",
         
           title: "a post with plotly.js",
         
