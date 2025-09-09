@@ -1,11 +1,13 @@
 ---
 layout: distill
-title: Mimic Play on Franka Single Arm and its Extension
-description: Replicating MimicPlay on a real one arm robot, and its extension to  bi-manual robot
-tags: MimicPlay at IROBMAN lab
+title: MimicPlay on Franka Arm and its Extension
+description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.
+tags: Imitation Learning, Learning from Human, Long-Horizon Manipulation
 date: 2025-09-08
 citation: true
 related_publications: true
+related_posts: false
+giscus_comments: false
 
 authors:
   - name: Ansh Prakash
@@ -75,9 +77,8 @@ toc:
         subsections:
           - name: Model level update
           - name: Teleoperation system
-  - name: Citations
-  - name: Footnotes
-  - name: References
+  - name: Conclusion
+  - name: Acknowledgements
 
 # Below is an example of injecting additional post-specific styles.
 # If you use this post as a template, delete this _styles block.
@@ -98,9 +99,50 @@ _styles: >
   }
 ---
 
+## Introduction
 
 
-## Citations
+---
 
-<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+## Related Works
+
+
+---
+
+## MimicPlay
+
+
+---
+
+## Data Collection Pipeline
+
+
+### Human Play data
+
+
+
+---
+
+
+
+## Acknowledgements
+
+We would like to thank our supervisor, [Franziska Herbert](https://pearl-lab.com/people/franziska-herbert/), for her guidance and support throughout this project. We also extend our gratitude to the course organizer and the lab staff for providing the resources and assistance that made this work possible. Finally, we thank the authors of [**MimicPlay**](https://mimic-play.github.io/) for making their code publicly available.
+
+---
+
+
+
+### BibTeX
+
+```bibtex
+@misc{prakashzhou2025mimicplay,
+  author       = {Prakash, Ansh and Zhou, Xiaoqi},
+  title        = {MimicPlay on Franka Arm and its Extension},
+  year         = {2025},
+  howpublished = {\url{https://anshprakash.github.io/blog/2025/mimicplay/}},
+  note         = {IROBMAN Lab Blog}
+}
+```
+
 ---
