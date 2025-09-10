@@ -37,6 +37,7 @@ toc:
     subsections:
       - name: High Level Latent Planner
       - name: Low Level Robot Policy
+  - name: Franka Teleoperation system
   - name: Data Collection Pipeline
     subsections:
       - name: Human Play data
@@ -50,7 +51,6 @@ toc:
         subsection:
           - name: Sampler
           - name: robomimimc style data format
-  - name: Franka Teleoperation system
   - name: High Level Latent Planner
     subsections:
       - name: Model
@@ -112,18 +112,6 @@ _styles: >
 
 ## MimicPlay
 
-
----
-
-## Data Collection Pipeline
-
-
-### Human Play data
-
-
-### Low level Teleoperation Data
-
-
 ---
 
 ## Franka Teleoperation system
@@ -147,7 +135,67 @@ Here is the code for teleoperation: [![GitHub Repo](https://img.shields.io/badge
     Here is a video of Teleoperation system in action
 </div>
 
+---
 
+## Data Collection Pipeline
+
+
+### Human Play data
+
+
+### Low level Teleoperation Data
+
+We record rosbag from various topics. Here is the list of topics we record. However, this will need further post-processing because all the topics are published at different frequncies.
+
+```
+topics:
+  - /franka_state_controller/franka_states
+  - /franka_gripper/joint_states
+  - /franka_state_controller/joint_states_desired
+  - /franka_state_controller/O_T_EE
+  - /franka_state_controller/joint_states
+  - /cartesian_impedance_controller/desired_pose
+  - /zedA/zed_node_A/left/image_rect_color 
+  - /zedB/zed_node_B/left/image_rect_color 
+```
+
+We first estimated the frequencies of all the topics and then used our sampling algorithm to resample at a fixed frequency, corresponding to the rate at which we want our policy controller to operate.
+
+<!-- Pre-processed frequencies -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        <strong>Before Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/cartesian_impedance_controller/desired_pose @ 50Hz</p>
+    </div>
+    <div class="col-sm text-center">
+        <strong>Before Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/franka_state_controller/O_T_EE @ 607Hz</p>
+    </div>
+</div>
+
+<!-- Post-processed frequencies -->
+<div class="row mt-4">
+    <div class="col-sm text-center">
+        <strong>After Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/cartesian_impedance_controller/desired_pose @ 13Hz</p>
+    </div>
+    <div class="col-sm text-center">
+        <strong>After Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/franka_state_controller/O_T_EE @ 13Hz</p>
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    Frequencies of both topics are aligned after applying our sampling algorithm, from highly different original rates (50Hz vs 607Hz) to a unified 13Hz (hyperparameter).
+</div>
+
+
+
+---
 
 ## Acknowledgements
 
