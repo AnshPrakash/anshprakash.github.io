@@ -2,7 +2,7 @@
 layout: distill
 title: MimicPlay on Franka Arm and its Extension
 description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.
-tags: Imitation-Learning, Learning-from-Human, Long-Horizon-Manipulation
+tags: Imitation-Learning, Learning-from-Human, Long-Horizon-Manipulation, pearl-lab
 date: 2025-09-08
 citation: true
 related_publications: true
@@ -259,7 +259,7 @@ FILE_CONTENTS {
 <div class="row mt-3">
     <div class="col-sm text-center">
         <strong>Method</strong>
-        {% include figure.liquid loading="eager" path="assets/img/mimicplay/lowlevel-policy.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
     </div>
 </div>
 
@@ -315,7 +315,84 @@ while not shutting_down():
 
 In the original paper, the robot policy operated at 17 Hz. However, our ZED camera could capture observations at a maximum frequency of 14 Hz, which set the upper bound for our deployed policy. Ultimately, we chose to run the robot policy at 13 Hz.
 
-### Live system: Policy Controller
+
+<!-- Low level policy -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/low-level-policy.drawio.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    The low-level policy receives a latent plan, image observations, and proprioceptive inputs, then samples an action from a multimodal Gaussian distribution. <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
+
+
+### Live system: Policy Controller 
+
+[![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/robot-policy/scripts/policy_controller.py)
+
+Below we present our evaluation results for the low-level policy. Although the success rate was 0%, we have developed a solid understanding of the underlying reasons for this outcome.
+
+Here is our evaluation video results:
+
+
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+      <h5>Human Prompts</h5>
+        {% include video.liquid path="assets/video/mimicplay/Human_prompts/data-2025-09-06_10-56-20/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+       <h5>Robot Policy Acting</h5>
+        {% include video.liquid path="assets/video/mimicplay/lowlevel-eval-policy_evaluation/robot-policy-eval-recordings/demo_0/data-2025-09-07_16-11-12/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/Human_prompts/data-2025-09-06_10-58-04/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/lowlevel-eval-policy_evaluation/robot-policy-eval-recordings/demo_2/data-2025-09-07_16-29-01/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/Human_prompts/data-2025-09-07_14-51-35_demo3/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/lowlevel-eval-policy_evaluation/robot-policy-eval-recordings/demo_3/data-2025-09-07_15-51-07/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+</div>
+
+
+
+<div class="caption">
+    Left: Human prompts, Right: Robot policy acting
+</div>
+
+
+### Key Limitations Observed
+
+1. **High-Level Planner — Poor Embedding Quality**
+
+   * We found that the high-level planner produced **high prediction errors** for trajectories, which resulted in **poor latent embeddings**.
+   * Through hyperparameter tuning, we discovered that our dataset required **fewer modes** for accurate trajectory prediction.
+   * Due to these weak embeddings, the low-level policy experienced **high variance between similar trajectories**, preventing it from fully leveraging the advantages of human guidance.
+
+2. **Absence of Wrist Camera**
+
+   * There was a significant **distribution shift** between training and evaluation image inputs from the front and back cameras.
+   * The original authors used a **wrist-mounted camera**, which helped stabilize the robot policy.
+   * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
+
+---
+
+
+
+
+
 
 ---
 
