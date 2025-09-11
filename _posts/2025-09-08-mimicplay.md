@@ -57,7 +57,7 @@ toc:
       - name: Latent space
       - name: Multi-modality
       - name: Training
-  - name: Low Level Policcy
+  - name: Low Level Policy
     subsections:
       - name: Model
       - name: Observation Space(Inputs)
@@ -194,6 +194,128 @@ We first estimated the frequencies of all the topics and then used our sampling 
 </div>
 
 
+**Here is the pseudo code for our sampling algorithm which ensures equal observations from all topics:**
+
+```python
+
+# Synchronize multiple topics to a target frequency
+
+start_time = min_timestamp(topics)
+end_time   = max_timestamp(topics)
+
+dt = 1 / target_freq
+t  = start_time
+
+while t <= end_time:
+    for topic in topics:
+        msg = select_message(topic, timestamp <= t) # the msg from the topic which has the greatest timestamp, but timestamp is <= t
+        topic_buffer[topic] = msg
+
+    combined_msgs = [topic_buffer[topic] for topic in topics]
+    t += dt
+```
+
+You can find the sampler package here.[![GitHub Repo](https://img.shields.io/badge/GitHub-Sampler-blue?logo=github)](https://github.com/AnshPrakash/MimicPlay/tree/main/sampler)
+
+Further, we transform the data into robomimic style hdf5 format [![GitHub Repo](https://img.shields.io/badge/GitHub-rosbag2hdf5-blue?logo=github)](https://github.com/AnshPrakash/MimicPlay/tree/main/rosbag2hdf5)
+
+
+> The final teleoperation dataset, formatted in **robomimic style**, is now ready to be used in the training pipeline.
+
+
+
+```
+FILE_CONTENTS {
+ group      /
+ group      /data
+ group      /data/demo_0
+ dataset    /data/demo_0/actions
+ group      /data/demo_0/obs
+ dataset    /data/demo_0/obs/O_T_EE
+ dataset    /data/demo_0/obs/back_camera
+ dataset    /data/demo_0/obs/ee_pose
+ dataset    /data/demo_0/obs/front_camera
+ dataset    /data/demo_0/obs/gripper_joint_states
+ dataset    /data/demo_0/obs/joint_states
+ dataset    /data/demo_0/obs/joint_states_desired
+ group      /data/demo_1
+ dataset    /data/demo_1/actions
+ group      /data/demo_1/obs
+ dataset    /data/demo_1/obs/O_T_EE
+ dataset    /data/demo_1/obs/back_camera
+ dataset    /data/demo_1/obs/ee_pose
+ dataset    /data/demo_1/obs/front_camera
+ dataset    /data/demo_1/obs/gripper_joint_states
+ dataset    /data/demo_1/obs/joint_states
+ dataset    /data/demo_1/obs/joint_states_desired
+ group      /mask
+ dataset    /mask/train
+}
+```
+
+---
+
+<!-- Training process -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        <strong>Method</strong>
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/lowlevel-policy.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
+
+## High Level Latent Planner
+
+
+
+## Low Level Policy
+
+
+During **training**, the low-level policy receives a latent embedding of the robot’s trajectory from the high-level latent planner. This embedding provides rich contextual information, significantly reducing the need for large amounts of teleoperation data.
+
+During **testing**, the low-level policy instead receives a latent embedding of the human trajectory. This acts as a *human prompt*, guiding the robot to replicate the demonstrated actions. At the same time, the policy continuously collects observations from onboard cameras and proprioceptive signals (via ROS topics) at the desired frequency.
+
+Below is the pseudocode illustrating how the system acquires observations at a fixed frequency in the real robot setup:
+
+
+```python
+
+# Get observations at a desired frequency
+
+# 1. Compute how long we should wait between observations
+dt = 1 / target_frequency
+
+while not shutting_down():
+    # 2. Wait until *all* topics have fresh data newer than last_obs_time + dt
+    if all_topics_ready(threshold_time=last_obs_time + dt):
+        
+        # 3. Snapshot the latest messages and timestamps
+        msgs, times = snapshot_latest_messages()
+
+        # 4. Convert each message into a NumPy-friendly format
+        data = {topic: convert_to_numpy(msgs[topic]) for topic in msgs}
+
+        # 5. Update last observation time and return a dictionary
+        last_obs_time = min(times.values())
+        return {
+            "timestamp": last_obs_time,
+            "data": data,
+            "times": times,
+        }
+
+    # 6. Otherwise, wait briefly and try again
+    sleep_a_bit()
+```
+
+> Actual code for reference here [![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/b088a9c38e2cb60ba15d4b1b7c3e7edeb2698313/scripts/policy_controller.py#L345)
+
+
+In the original paper, the robot policy operated at 17 Hz. However, our ZED camera could capture observations at a maximum frequency of 14 Hz, which set the upper bound for our deployed policy. Ultimately, we chose to run the robot policy at 13 Hz.
+
+### Live system: Policy Controller
 
 ---
 
