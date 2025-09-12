@@ -584,6 +584,19 @@ The current pretrained hand detection model is able to distinguish between the *
 
 To address this issue, one potential approach we are exploring is **temporal interpolation**. Specifically, when a hand temporarily disappears due to occlusion, we use its **2D infomation before and after the disappearance** to interpolate the missing frames. By filling in these occluded intervals, we aim to maintain more consistent 3D hand trajectory estimation for bimanual tasks.
 
+We can use a Kalman filter to estimate the position of the occluded part by modeling the trajectory of the hand with a simple linear dynamics model.
+
+
+### High-level planner & Low-level planner - Bimanual
+
+Only minor changes to the model are required to enable it for a bimanual scenario. Specifically, the action dimension needs to be doubled to account for the additional arm, and more observations must be added to track the positions of both end-effectors. The more challenging aspect lies in fine-tuning hyperparameters—such as the number of modes in the GMM decoder of the high-level planner—since data multimodality increases with two arms.
+
+
+
+# Conclusion
+
+
+
 ---
 
 ## Acknowledgements
