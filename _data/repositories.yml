@@ -1,14 +1,9 @@
 github_users:
-  - torvalds
-  - alshedivat
+  - anshprakash
 
-repo_description_lines_max: 2
+repo_description_lines_max: 0
 
 github_repos:
-  - alshedivat/al-folio
-  - jekyll/jekyll
-  - twbs/bootstrap
-  - jquery/jquery
-  - FortAwesome/Font-Awesome
-  - mathjax/MathJax
-  - jpswalsh/academicons
+  - AnshPrakash/Franka-pick-and-place
+  - AnshPrakash/franka_teleop
+  - AnshPrakash/MimicPlay

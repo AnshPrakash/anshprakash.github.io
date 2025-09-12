@@ -1,22 +1,14 @@
 ---
 layout: distill
-title: Mimic Play on Franka Single Arm and its Extension
-description: Replicating MimicPlay on a real one arm robot, and its extension to  bi-manual robot
-tags: distill formatting
-giscus_comments: true
+title: MimicPlay on Franka Arm and its Extension
+description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.
+tags: Imitation-Learning, Learning-from-Human, Long-Horizon-Manipulation, pearl-lab
 date: 2025-09-08
-featured: true
-mermaid:
-  enabled: true
-  zoomable: true
-code_diff: true
-map: true
-chart:
-  chartjs: true
-  echarts: true
-  vega_lite: true
-tikzjax: true
-typograms: true
+citation: true
+related_publications: true
+related_posts: false
+giscus_comments: false
+
 
 authors:
   - name: Ansh Prakash
@@ -37,23 +29,57 @@ bibliography: 2025-09-08-mimicplay.bib
 #   - we may want to automate TOC generation in the future using
 #     jekyll-toc plugin (https://github.com/toshimaru/jekyll-toc).
 toc:
-  - name: Equations
-    # if a section has subsections, you can add them as follows:
-    # subsections:
-    #   - name: Example Child Subsection 1
-    #   - name: Example Child Subsection 2
-  - name: Citations
-  - name: Footnotes
-  - name: Code Blocks
-  - name: Interactive Plots
-  - name: Mermaid
-  - name: Diff2Html
-  - name: Leaflet
-  - name: Chartjs, Echarts and Vega-Lite
-  - name: TikZ
-  - name: Typograms
-  - name: Layouts
-  - name: Other Typography?
+  - name: Introduction
+    subsections:
+      - name: Behavioural Cloning
+  - name: Related Works
+  - name: MimicPlay
+    subsections:
+      - name: High Level Latent Planner
+      - name: Low Level Robot Policy
+  - name: Franka Teleoperation system
+  - name: Data Collection Pipeline
+    subsections:
+      - name: Human Play data
+        subsections:
+          - name: Hand Tracking
+            subsections:
+              - name: ABC
+              - name: XYZ
+          - name: Miscellaneous
+      - name: Low level Teleoperation Data
+        subsection:
+          - name: Sampler
+          - name: robomimimc style data format
+  - name: High Level Latent Planner
+    subsections:
+      - name: Model
+      - name: Latent space
+      - name: Multi-modality
+      - name: Training
+  - name: Low Level Policy
+    subsections:
+      - name: Model
+      - name: Observation Space(Inputs)
+      - name: Action Space(Outputs)
+  - name: Differences in the original Setup and our Setup
+    subsecctions:
+      - name: Cameras
+      - name: Environment
+  - name: Experiments
+    subsections:
+      - name: High Level Planner
+      - name: Low Level Planner
+  - name: Extension to Bimanual Tiago
+    subsections:
+      - name: Update to Hand Tracking system to two hands
+      - name: High Level Planner
+      - name: Low level Robot Policy update
+        subsections:
+          - name: Model level update
+          - name: Teleoperation system
+  - name: Conclusion
+  - name: Acknowledgements
 
 # Below is an example of injecting additional post-specific styles.
 # If you use this post as a template, delete this _styles block.
@@ -74,1424 +100,493 @@ _styles: >
   }
 ---
 
-## Equations
+## Introduction
 
-This theme supports rendering beautiful math in inline and display modes using [MathJax 3](https://www.mathjax.org/) engine.
-You just need to surround your math expression with `$$`, like `$$ E = mc^2 $$`.
-If you leave it inside a paragraph, it will produce an inline expression, just like $$ E = mc^2 $$.
-
-In fact, you can also use a single dollar sign `$` to create inline formulas, such as `$ E = mc^2 $`, which will render as $ E = mc^2 $. This approach provides the same effect during TeX-based compilation, but visually it appears slightly less bold compared to double-dollar signs `$$`, making it blend more naturally with surrounding text.
-
-To use display mode, again surround your expression with `$$` and place it as a separate paragraph.
-Here is an example:
-
-$$
-\left( \sum_{k=1}^n a_k b_k \right)^2 \leq \left( \sum_{k=1}^n a_k^2 \right) \left( \sum_{k=1}^n b_k^2 \right)
-$$
-
-Note that MathJax 3 is [a major re-write of MathJax](https://docs.mathjax.org/en/latest/upgrading/whats-new-3.0.html) that brought a significant improvement to the loading and rendering speed, which is now [on par with KaTeX](http://www.intmath.com/cg5/katex-mathjax-comparison.php).
 
 ---
 
-## Citations
+## Related Works
 
-Citations are then used in the article body with the `<d-cite>` tag.
-The key attribute is a reference to the id provided in the bibliography.
-The key attribute can take multiple ids, separated by commas.
-
-The citation is presented inline like this: <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> (a number that displays more information on hover).
-If you have an appendix, a bibliography is automatically created and populated in it.
-
-Distill chose a numerical inline citation style to improve readability of citation dense articles and because many of the benefits of longer citations are obviated by displaying more information on hover.
-However, we consider it good style to mention author last names if you discuss something at length and it fits into the flow well — the authors are human and it’s nice for them to have the community associate them with their work.
 
 ---
 
-## Footnotes
-
-Just wrap the text you would like to show up in a footnote in a `<d-footnote>` tag.
-The number of the footnote will be automatically generated.<d-footnote>This will become a hoverable footnote.</d-footnote>
+## MimicPlay
 
 ---
 
-## Code Blocks
+## Franka Teleoperation system
 
-Syntax highlighting is provided within `<d-code>` tags.
-An example of inline code snippets: `<d-code language="html">let x = 10;</d-code>`.
-For larger blocks of code, add a `block` attribute:
+We developed our own teleoperation system to collect low-level demonstration data. Using a Meta Quest VR controller, we operated the Panda arm, with the headset tracking the controller’s pose in real time. The pose differences from the controller were transformed into corresponding end-effector movements on the robot, enabling us to perform various pick-and-place tasks.
 
-<d-code block language="javascript">
-  var x = 25;
-  function(x) {
-    return x * x;
-  }
-</d-code>
+We used a Cartesian impedance controller for safer operation and additionally calibrated gravity compensation for a different gripper. This ensures that the end-effector neither drops nor unintentionally lifts depending on the load. Instructions for calibration can be found [here](https://github.com/nbfigueroa/franka_interactive_controllers/blob/main/doc/instructions/external_tool_compensation.md).
 
-**Note:** `<d-code>` blocks do not look good in the dark mode. You can instead use the standard Jekyll syntax highlight with the `highlight` liquid tag.
+Here is the code for teleoperation: [![GitHub Repo](https://img.shields.io/badge/GitHub-Franka--Teleop-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop)
 
-{% highlight javascript %}
-var x = 25;
-function(x) {
-return x \* x;
-}
-{% endhighlight %}
 
-You can also write standard Markdown code blocks in triple ticks with a language tag, for instance:
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+        {% include video.liquid path="assets/video/mimicplay/teleop_demo.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+        {% include video.liquid path="assets/video/mimicplay/teleop_demo_front.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+</div>
+<div class="caption">
+    Here is a video of Teleoperation system in action
+</div>
+
+---
+
+## Data Collection Pipeline
+
+
+### Human Play data
+
+We store the human play data in **mp4 format** with a frame rate of **20 FPS**. Afterwards, we apply some **post-processing** to convert it into the required **robomimic format**.
+
+1. **Hand detection**  
+   We use a pretrained hand detection model[![GitHub Repo](https://img.shields.io/badge/GitHub-handobj-blue?logo=github)](https://github.com/ddshan/hand_object_detector) to locate human hands in the video frames. In total, we collected **10 demonstrations**. After filtering, we discarded several demos where the hands could not be reliably detected.
+
+2. **3D triangulation and dataset conversion**  
+   Using the **calibrated stereo camera setup** (two synchronized viewpoints), we triangulate the detected hand positions to obtain their **3D coordinates in the world frame**. These 3D hand trajectories are then converted into the **robomimic dataset format**.
+
+Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system. Below is the detection code used for this visualization check:
 
 ```python
-def foo(x):
-  return x
-```
+out_dir = "buffer/Slow_version_Human_prompts_0"
+os.makedirs(out_dir, exist_ok=True)
+# --- Load HDF5 ---
+hdf5_path = "/home/xiaoqi/MimicPlay/mimicplay/datasets/playdata/Slow_version_Human_prompts/demo_0_new.hdf5"   # update with your file path
+with h5py.File(hdf5_path, "r") as f:
+    # Extract robot0 end-effector positions (605, 1, 3)
+    eef_pos = f["data/demo_0/obs/robot0_eef_pos"][:]  # shape (605,1,3)
+    eef_pos = eef_pos.squeeze(axis=1)  # now (605, 3)
 
----
+    # Extract images if needed
+    agentview_img = f["data/demo_0/obs/agentview_image"][:] 
+    agentview_img2 = f["data/demo_0/obs/agentview_image_2"][:] 
 
-## Interactive Plots
+# --- Save raw 3D positions ---
+np.savetxt(os.path.join(out_dir, "robot0_eef_pos.txt"), eef_pos, fmt="%.6f")
 
-You can add interative plots using plotly + iframes :framed_picture:
-
-<div class="l-page">
-  <iframe src="{{ '/assets/plotly/demo.html' | relative_url }}" frameborder='0' scrolling='no' height="500px" width="100%" style="border: 1px dashed grey;"></iframe>
-</div>
-
-The plot must be generated separately and saved into an HTML file.
-To generate the plot that you see above, you can use the following code snippet:
-
-{% highlight python %}
-import pandas as pd
-import plotly.express as px
-df = pd.read_csv(
-'https://raw.githubusercontent.com/plotly/datasets/master/earthquakes-23k.csv'
+ZEDA_LEFT_CAM = CameraModel(
+    fx=1059.9764404296875,
+    fy=1059.9764404296875,
+    cx=963.07568359375,
+    cy=522.3530883789062,
+    R_wc=R.from_quat([-0.404974467935380, -0.808551385290863, 0.425767747250020, 0.031018753461827]).as_matrix(),
+    t_wc=np.array([0.903701253331141, 0.444249176547482, 0.598645500102408])
 )
-fig = px.density_mapbox(
-df,
-lat='Latitude',
-lon='Longitude',
-z='Magnitude',
-radius=10,
-center=dict(lat=0, lon=180),
-zoom=0,
-mapbox_style="stamen-terrain",
+
+ZEDB_RIGHT_CAM = CameraModel(
+    fx=1060.0899658203125,
+    fy=1059.0899658203125,
+    cx=958.9099731445312,
+    cy=561.5670166015625,
+    R_wc=R.from_quat([0.81395177, -0.40028226, -0.07631803, -0.41404371]).as_matrix(),
+    t_wc=np.array([0.11261126, -0.52195948, 0.55795671])
 )
-fig.show()
-fig.write_html('assets/plotly/demo.html')
-{% endhighlight %}
 
----
+# scale factor from 1920x1080 -> 640x360
+sx = 640.0 / 1920.0   # = 1/3
+sy = 360.0 / 1080.0   # = 1/3
 
-## Details boxes
+ZEDA_LEFT_CAM  = ZEDA_LEFT_CAM.scaled(sx, sy)
+ZEDB_RIGHT_CAM = ZEDB_RIGHT_CAM.scaled(sx, sy)
 
-Details boxes are collapsible boxes which hide additional information from the user. They can be added with the `details` liquid tag:
 
-{% details Click here to know more %}
-Additional details, where math $$ 2x - 1 $$ and `code` is rendered correctly.
-{% enddetails %}
+# --- Project and overlay ---
+left_count, right_count = 0, 0         
+both_count, none_count = 0, 0          
 
----
+for i, (pos, img1, img2) in enumerate(tqdm(zip(eef_pos, agentview_img, agentview_img2), total=len(eef_pos))):
+    uv1 = ZEDA_LEFT_CAM.project_point(pos).astype(int)
+    uv2 = ZEDB_RIGHT_CAM.project_point(pos).astype(int)
 
-## Mermaid
+    img1_draw = img1.copy()
+    img2_draw = img2.copy()
 
-This theme supports creating diagrams directly in markdown using [Mermaid](https://mermaid.js.org/). Mermaid enables users to render flowcharts, sequence diagrams, class diagrams, Gantt charts, and more. Simply embed the diagram syntax within a mermaid code block.
+    inside1, inside2 = False, False
 
-To create a Gantt chart, you can use the following syntax:
+    if 0 <= uv1[0] < img1_draw.shape[1] and 0 <= uv1[1] < img1_draw.shape[0]:
+        cv2.circle(img1_draw, (uv1[0], uv1[1]), radius=5, color=(0, 255, 0), thickness=-1)
+        inside1 = True
+        left_count += 1
 
-````markdown
-```mermaid
-gantt
-    dateFormat  YYYY-MM-DD
-    title A Gantt Diagram
+    if 0 <= uv2[0] < img2_draw.shape[1] and 0 <= uv2[1] < img2_draw.shape[0]:
+        cv2.circle(img2_draw, (uv2[0], uv2[1]), radius=5, color=(0, 255, 0), thickness=-1)
+        inside2 = True
+        right_count += 1
 
-    section Section
-    Task A           :a1, 2025-01-01, 30d
-    Task B           :after a1, 20d
-    Task C           :2025-01-10, 12d
-```
-````
+    # wrap
+    if inside1 and inside2:
+        both_count += 1
+    elif not inside1 and not inside2:
+        none_count += 1
 
-And here’s how it will be rendered:
+    out1 = os.path.join(out_dir, f"agentview1_{i:04d}.png")
+    out2 = os.path.join(out_dir, f"agentview2_{i:04d}.png")
 
-```mermaid
-gantt
-    dateFormat  YYYY-MM-DD
-    title A Gantt Diagram
+    cv2.imwrite(out1, cv2.cvtColor(img1_draw, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(out2, cv2.cvtColor(img2_draw, cv2.COLOR_RGB2BGR))
 
-    section Section
-    Task A           :a1, 2025-01-01, 30d
-    Task B           :after a1, 20d
-    Task C           :2025-01-10, 12d
-```
+    print(f"[Frame {i}] saved → {out1}, {out2} | inside1={inside1}, inside2={inside2}")
 
-Similarly, you can also use it to create beautiful class diagrams:
-
-````
-```mermaid
-classDiagram
-direction LR
-    class Animal {
-        +String species
-        +int age
-        +makeSound()
-    }
-    class Dog {
-        +String breed
-        +bark()
-    }
-    class Cat {
-        +String color
-        +meow()
-    }
-    class Bird {
-        +String wingSpan
-        +fly()
-    }
-    class Owner {
-        +String name
-        +int age
-        +adoptAnimal(Animal animal)
-    }
-
-    Animal <|-- Dog
-    Animal <|-- Cat
-    Animal <|-- Bird
-    Owner "1" --> "0..*" Animal
-
-    Dog : +fetch()
-    Cat : +purr()
-    Bird : +sing()
-```
-````
-
-It will be presented as:
-
-```mermaid
-classDiagram
-direction LR
-    class Animal {
-        +String species
-        +int age
-        +makeSound()
-    }
-    class Dog {
-        +String breed
-        +bark()
-    }
-    class Cat {
-        +String color
-        +meow()
-    }
-    class Bird {
-        +String wingSpan
-        +fly()
-    }
-    class Owner {
-        +String name
-        +int age
-        +adoptAnimal(Animal animal)
-    }
-
-    Animal <|-- Dog
-    Animal <|-- Cat
-    Animal <|-- Bird
-    Owner "1" --> "0..*" Animal
-
-    Dog : +fetch()
-    Cat : +purr()
-    Bird : +sing()
+# statistic results
+print("========== check and statistical results ==========")
+print(f"left detecting: {left_count}")
+print(f"right detecting: {right_count}")
+print(f"both detecting: {both_count}")
+print(f"both not detecting: {none_count}")
+print(f"total numbers:   {len(eef_pos)}")
+print(f"Saved projections and images in '{out_dir}/'")
 ```
 
-With Mermaid, you can easily add clear and dynamic diagrams to enhance your blog content.
 
----
 
-## Diff2Html
+### Low level Teleoperation Data
 
-This theme also supports integrating [Diff2Html](https://github.com/rtfpessoa/diff2html), a tool that beautifully renders code differences (diffs) directly in markdown. Diff2Html is ideal for showcasing code changes, allowing you to clearly present additions, deletions, and modifications. It’s perfect for code reviews, documentation, and tutorials where step-by-step code changes need to be highlighted—you can even introduce changes across multiple files at once.
+We record rosbag from various topics. Here is the list of topics we record. However, this will need further post-processing because all the topics are published at different frequncies.
 
-````markdown
-```diff2html
-diff --git a/utils/mathUtils.js b/utils/mathUtils.js
-index 3b5f3d1..c7f9b2e 100644
---- a/utils/mathUtils.js
-+++ b/utils/mathUtils.js
-@@ -1,8 +1,12 @@
--// Basic math utilities
-+// Extended math utilities with additional functions
-
--export function calculateArea(radius) {
--    const PI = 3.14159;
-+export function calculateCircleMetrics(radius) {
-+    const PI = Math.PI;
-     const area = PI * radius ** 2;
-+    const circumference = 2 * PI * radius;
-+
-+    if (!isValidRadius(radius)) throw new Error("Invalid radius");
-+
-     return { area, circumference };
- }
-
--export function validateRadius(radius) {
-+export function isValidRadius(radius) {
-     return typeof radius === 'number' && radius > 0;
- }
-
-diff --git a/main.js b/main.js
-index 5f6a9c3..b7d4e8f 100644
---- a/main.js
-+++ b/main.js
-@@ -2,9 +2,12 @@
- import { calculateCircleMetrics } from './utils/mathUtils';
-
--function displayCircleMetrics(radius) {
--    const { area } = calculateCircleMetrics(radius);
-+function displayCircleMetrics(radius) {
-+    const { area, circumference } = calculateCircleMetrics(radius);
-     console.log(`Area: ${area}`);
-+    console.log(`Circumference: ${circumference}`);
- }
-
--displayCircleMetrics(5);
-+try {
-+    displayCircleMetrics(5);
-+} catch (error) {
-+    console.error("Error:", error.message);
-+}
 ```
-````
-
-Here’s how it will look when rendered with Diff2Html:
-
-```diff2html
-diff --git a/utils/mathUtils.js b/utils/mathUtils.js
-index 3b5f3d1..c7f9b2e 100644
---- a/utils/mathUtils.js
-+++ b/utils/mathUtils.js
-@@ -1,8 +1,12 @@
--// Basic math utilities
-+// Extended math utilities with additional functions
-
--export function calculateArea(radius) {
--    const PI = 3.14159;
-+export function calculateCircleMetrics(radius) {
-+    const PI = Math.PI;
-     const area = PI * radius ** 2;
-+    const circumference = 2 * PI * radius;
-+
-+    if (!isValidRadius(radius)) throw new Error("Invalid radius");
-+
-     return { area, circumference };
- }
-
--export function validateRadius(radius) {
-+export function isValidRadius(radius) {
-     return typeof radius === 'number' && radius > 0;
- }
-
-diff --git a/main.js b/main.js
-index 5f6a9c3..b7d4e8f 100644
---- a/main.js
-+++ b/main.js
-@@ -2,9 +2,12 @@
- import { calculateCircleMetrics } from './utils/mathUtils';
-
--function displayCircleMetrics(radius) {
--    const { area } = calculateCircleMetrics(radius);
-+function displayCircleMetrics(radius) {
-+    const { area, circumference } = calculateCircleMetrics(radius);
-     console.log(`Area: ${area}`);
-+    console.log(`Circumference: ${circumference}`);
- }
-
--displayCircleMetrics(5);
-+try {
-+    displayCircleMetrics(5);
-+} catch (error) {
-+    console.error("Error:", error.message);
-+}
+topics:
+  - /franka_state_controller/franka_states
+  - /franka_gripper/joint_states
+  - /franka_state_controller/joint_states_desired
+  - /franka_state_controller/O_T_EE
+  - /franka_state_controller/joint_states
+  - /cartesian_impedance_controller/desired_pose
+  - /zedA/zed_node_A/left/image_rect_color 
+  - /zedB/zed_node_B/left/image_rect_color 
 ```
 
----
+We first estimated the frequencies of all the topics and then used our sampling algorithm to resample at a fixed frequency, corresponding to the rate at which we want our policy controller to operate.
 
-## Leaflet
-
-[Leaflet](https://leafletjs.com/) is created by Ukrainian software engineer [Volodymyr Agafonkin](https://agafonkin.com/), allowing interactive maps to be embedded in webpages. With support for [GeoJSON data](https://geojson.org/), Leaflet allows you to highlight specific regions, making it easy to visualize geographical information in detail.
-
-You can use the following code to load map information on [OpenStreetMap](https://www.openstreetmap.org/):
-
-````markdown
-```geojson
-{
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Crimea",
-        "popupContent": "Occupied Crimea"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              33.9,
-              45.3
-            ],
-            [
-              36.5,
-              45.3
-            ],
-            [
-              36.5,
-              44.4
-            ],
-            [
-              33.9,
-              44.4
-            ],
-            [
-              33.9,
-              45.3
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Donetsk",
-        "popupContent": "Occupied Donetsk"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              37.5,
-              48.5
-            ],
-            [
-              39.5,
-              48.5
-            ],
-            [
-              39.5,
-              47.5
-            ],
-            [
-              37.5,
-              47.5
-            ],
-            [
-              37.5,
-              48.5
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Luhansk",
-        "popupContent": "Occupied Luhansk"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              38.5,
-              49.5
-            ],
-            [
-              40.5,
-              49.5
-            ],
-            [
-              40.5,
-              48.5
-            ],
-            [
-              38.5,
-              48.5
-            ],
-            [
-              38.5,
-              49.5
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Kherson",
-        "popupContent": "Occupied Kherson"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              32.3,
-              47.3
-            ],
-            [
-              34.3,
-              47.3
-            ],
-            [
-              34.3,
-              46.3
-            ],
-            [
-              32.3,
-              46.3
-            ],
-            [
-              32.3,
-              47.3
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Zaporizhzhia",
-        "popupContent": "Occupied Zaporizhzhia"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              34.3,
-              48
-            ],
-            [
-              36.3,
-              48
-            ],
-            [
-              36.3,
-              47
-            ],
-            [
-              34.3,
-              47
-            ],
-            [
-              34.3,
-              48
-            ]
-          ]
-        ]
-      }
-    }
-  ]
-}
-```
-````
-
-The rendered map below highlights the regions of Ukraine that have been illegally occupied by Russia over the years, including Crimea and the four eastern regions:
-
-```geojson
-{
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Crimea",
-        "popupContent": "Occupied Crimea"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              33.9,
-              45.3
-            ],
-            [
-              36.5,
-              45.3
-            ],
-            [
-              36.5,
-              44.4
-            ],
-            [
-              33.9,
-              44.4
-            ],
-            [
-              33.9,
-              45.3
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Donetsk",
-        "popupContent": "Occupied Donetsk"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              37.5,
-              48.5
-            ],
-            [
-              39.5,
-              48.5
-            ],
-            [
-              39.5,
-              47.5
-            ],
-            [
-              37.5,
-              47.5
-            ],
-            [
-              37.5,
-              48.5
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Luhansk",
-        "popupContent": "Occupied Luhansk"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              38.5,
-              49.5
-            ],
-            [
-              40.5,
-              49.5
-            ],
-            [
-              40.5,
-              48.5
-            ],
-            [
-              38.5,
-              48.5
-            ],
-            [
-              38.5,
-              49.5
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Kherson",
-        "popupContent": "Occupied Kherson"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              32.3,
-              47.3
-            ],
-            [
-              34.3,
-              47.3
-            ],
-            [
-              34.3,
-              46.3
-            ],
-            [
-              32.3,
-              46.3
-            ],
-            [
-              32.3,
-              47.3
-            ]
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Zaporizhzhia",
-        "popupContent": "Occupied Zaporizhzhia"
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [
-              34.3,
-              48
-            ],
-            [
-              36.3,
-              48
-            ],
-            [
-              36.3,
-              47
-            ],
-            [
-              34.3,
-              47
-            ],
-            [
-              34.3,
-              48
-            ]
-          ]
-        ]
-      }
-    }
-  ]
-}
-```
-
----
-
-## Chartjs, Echarts and Vega-Lite
-
-[Chart.js](https://www.chartjs.org/) is a versatile JavaScript library for creating responsive and interactive charts. Supporting multiple chart types like bar, line, pie, and radar, it’s an ideal tool for visualizing data directly in webpages.
-
-Here’s an example of a JSON-style configuration that creates a bar chart in Chart.js:
-
-````
-```chartjs
-{
-  "type": "bar",
-  "data": {
-    "labels": ["2017", "2018", "2019", "2020", "2021"],
-    "datasets": [
-      {
-        "label": "Population (millions)",
-        "data": [12, 15, 13, 14, 16],
-        "backgroundColor": "rgba(54, 162, 235, 0.6)",
-        "borderColor": "rgba(54, 162, 235, 1)",
-        "borderWidth": 1
-      }
-    ]
-  },
-  "options": {
-    "scales": {
-      "y": {
-        "beginAtZero": true
-      }
-    }
-  }
-}
-```
-````
-
-The rendered bar chart illustrates population data from 2017 to 2021:
-
-```chartjs
-{
-  "type": "bar",
-  "data": {
-    "labels": ["2017", "2018", "2019", "2020", "2021"],
-    "datasets": [
-      {
-        "label": "Population (millions)",
-        "data": [12, 15, 13, 14, 16],
-        "backgroundColor": "rgba(54, 162, 235, 0.6)",
-        "borderColor": "rgba(54, 162, 235, 1)",
-        "borderWidth": 1
-      }
-    ]
-  },
-  "options": {
-    "scales": {
-      "y": {
-        "beginAtZero": true
-      }
-    }
-  }
-}
-```
-
----
-
-[ECharts](https://echarts.apache.org/) is a powerful visualization library from [Apache](https://www.apache.org/) that supports a wide range of interactive charts, including more advanced types such as scatter plots, heatmaps, and geographic maps.
-
-The following JSON configuration creates a visually enhanced line chart that displays monthly sales data for two products.
-
-````
-```echarts
-{
-  "title": {
-    "text": "Monthly Sales Comparison",
-    "left": "center"
-  },
-  "tooltip": {
-    "trigger": "axis",
-    "backgroundColor": "rgba(50, 50, 50, 0.7)",
-    "borderColor": "#777",
-    "borderWidth": 1,
-    "textStyle": {
-      "color": "#fff"
-    }
-  },
-  "legend": {
-    "data": ["Product A", "Product B"],
-    "top": "10%"
-  },
-  "xAxis": {
-    "type": "category",
-    "data": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    "axisLine": {
-      "lineStyle": {
-        "color": "#888"
-      }
-    }
-  },
-  "yAxis": {
-    "type": "value",
-    "axisLine": {
-      "lineStyle": {
-        "color": "#888"
-      }
-    },
-    "splitLine": {
-      "lineStyle": {
-        "type": "dashed"
-      }
-    }
-  },
-  "series": [
-    {
-      "name": "Product A",
-      "type": "line",
-      "smooth": true,
-      "data": [820, 932, 901, 934, 1290, 1330, 1320, 1400, 1450, 1500, 1600, 1650],
-      "itemStyle": {
-        "color": "#5470C6"
-      },
-      "lineStyle": {
-        "width": 3
-      },
-      "areaStyle": {
-        "color": {
-          "type": "linear",
-          "x": 0,
-          "y": 0,
-          "x2": 0,
-          "y2": 1,
-          "colorStops": [
-            { "offset": 0, "color": "rgba(84, 112, 198, 0.5)" },
-            { "offset": 1, "color": "rgba(84, 112, 198, 0)" }
-          ]
-        }
-      },
-      "emphasis": {
-        "focus": "series"
-      }
-    },
-    {
-      "name": "Product B",
-      "type": "line",
-      "smooth": true,
-      "data": [620, 732, 701, 734, 1090, 1130, 1120, 1200, 1250, 1300, 1400, 1450],
-      "itemStyle": {
-        "color": "#91CC75"
-      },
-      "lineStyle": {
-        "width": 3
-      },
-      "areaStyle": {
-        "color": {
-          "type": "linear",
-          "x": 0,
-          "y": 0,
-          "x2": 0,
-          "y2": 1,
-          "colorStops": [
-            { "offset": 0, "color": "rgba(145, 204, 117, 0.5)" },
-            { "offset": 1, "color": "rgba(145, 204, 117, 0)" }
-          ]
-        }
-      },
-      "emphasis": {
-        "focus": "series"
-      }
-    }
-  ]
-}
-```
-````
-
-The rendered output is shown below, and you can also interact with it using your mouse:
-
-```echarts
-{
-  "title": {
-    "text": "Monthly Sales Comparison",
-    "left": "center"
-  },
-  "tooltip": {
-    "trigger": "axis",
-    "backgroundColor": "rgba(50, 50, 50, 0.7)",
-    "borderColor": "#777",
-    "borderWidth": 1,
-    "textStyle": {
-      "color": "#fff"
-    }
-  },
-  "legend": {
-    "data": ["Product A", "Product B"],
-    "top": "10%"
-  },
-  "xAxis": {
-    "type": "category",
-    "data": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    "axisLine": {
-      "lineStyle": {
-        "color": "#888"
-      }
-    }
-  },
-  "yAxis": {
-    "type": "value",
-    "axisLine": {
-      "lineStyle": {
-        "color": "#888"
-      }
-    },
-    "splitLine": {
-      "lineStyle": {
-        "type": "dashed"
-      }
-    }
-  },
-  "series": [
-    {
-      "name": "Product A",
-      "type": "line",
-      "smooth": true,
-      "data": [820, 932, 901, 934, 1290, 1330, 1320, 1400, 1450, 1500, 1600, 1650],
-      "itemStyle": {
-        "color": "#5470C6"
-      },
-      "lineStyle": {
-        "width": 3
-      },
-      "areaStyle": {
-        "color": {
-          "type": "linear",
-          "x": 0,
-          "y": 0,
-          "x2": 0,
-          "y2": 1,
-          "colorStops": [
-            { "offset": 0, "color": "rgba(84, 112, 198, 0.5)" },
-            { "offset": 1, "color": "rgba(84, 112, 198, 0)" }
-          ]
-        }
-      },
-      "emphasis": {
-        "focus": "series"
-      }
-    },
-    {
-      "name": "Product B",
-      "type": "line",
-      "smooth": true,
-      "data": [620, 732, 701, 734, 1090, 1130, 1120, 1200, 1250, 1300, 1400, 1450],
-      "itemStyle": {
-        "color": "#91CC75"
-      },
-      "lineStyle": {
-        "width": 3
-      },
-      "areaStyle": {
-        "color": {
-          "type": "linear",
-          "x": 0,
-          "y": 0,
-          "x2": 0,
-          "y2": 1,
-          "colorStops": [
-            { "offset": 0, "color": "rgba(145, 204, 117, 0.5)" },
-            { "offset": 1, "color": "rgba(145, 204, 117, 0)" }
-          ]
-        }
-      },
-      "emphasis": {
-        "focus": "series"
-      }
-    }
-  ]
-}
-```
-
----
-
-[Vega-Lite](https://vega.github.io/vega-lite/) is a declarative visualization grammar that allows users to create, share, and customize a wide range of interactive data visualizations. The following JSON configuration generates a straightforward bar chart:
-
-````
-```vega_lite
-{
-  "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "width": 400,
-  "height": 200,
-  "padding": 5,
-
-  "data": [
-    {
-      "name": "table",
-      "values": [
-        {"category": "A", "value": 28},
-        {"category": "B", "value": 55},
-        {"category": "C", "value": 43},
-        {"category": "D", "value": 91},
-        {"category": "E", "value": 81},
-        {"category": "F", "value": 53},
-        {"category": "G", "value": 19},
-        {"category": "H", "value": 87}
-      ]
-    }
-  ],
-
-  "scales": [
-    {
-      "name": "xscale",
-      "type": "band",
-      "domain": {"data": "table", "field": "category"},
-      "range": "width",
-      "padding": 0.1
-    },
-    {
-      "name": "yscale",
-      "type": "linear",
-      "domain": {"data": "table", "field": "value"},
-      "nice": true,
-      "range": "height"
-    }
-  ],
-
-  "axes": [
-    {"orient": "bottom", "scale": "xscale"},
-    {"orient": "left", "scale": "yscale"}
-  ],
-
-  "marks": [
-    {
-      "type": "rect",
-      "from": {"data": "table"},
-      "encode": {
-        "enter": {
-          "x": {"scale": "xscale", "field": "category"},
-          "width": {"scale": "xscale", "band": 0.8},
-          "y": {"scale": "yscale", "field": "value"},
-          "y2": {"scale": "yscale", "value": 0},
-          "fill": {"value": "steelblue"}
-        },
-        "update": {
-          "fillOpacity": {"value": 1}
-        },
-        "hover": {
-          "fill": {"value": "orange"}
-        }
-      }
-    }
-  ]
-}
-```
-````
-
-The rendered output shows a clean and simple bar chart with a hover effect：
-
-```vega_lite
-{
-  "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "width": 400,
-  "height": 200,
-  "padding": 5,
-
-  "data": [
-    {
-      "name": "table",
-      "values": [
-        {"category": "A", "value": 28},
-        {"category": "B", "value": 55},
-        {"category": "C", "value": 43},
-        {"category": "D", "value": 91},
-        {"category": "E", "value": 81},
-        {"category": "F", "value": 53},
-        {"category": "G", "value": 19},
-        {"category": "H", "value": 87}
-      ]
-    }
-  ],
-
-  "scales": [
-    {
-      "name": "xscale",
-      "type": "band",
-      "domain": {"data": "table", "field": "category"},
-      "range": "width",
-      "padding": 0.1
-    },
-    {
-      "name": "yscale",
-      "type": "linear",
-      "domain": {"data": "table", "field": "value"},
-      "nice": true,
-      "range": "height"
-    }
-  ],
-
-  "axes": [
-    {"orient": "bottom", "scale": "xscale"},
-    {"orient": "left", "scale": "yscale"}
-  ],
-
-  "marks": [
-    {
-      "type": "rect",
-      "from": {"data": "table"},
-      "encode": {
-        "enter": {
-          "x": {"scale": "xscale", "field": "category"},
-          "width": {"scale": "xscale", "band": 0.8},
-          "y": {"scale": "yscale", "field": "value"},
-          "y2": {"scale": "yscale", "value": 0},
-          "fill": {"value": "steelblue"}
-        },
-        "update": {
-          "fillOpacity": {"value": 1}
-        },
-        "hover": {
-          "fill": {"value": "orange"}
-        }
-      }
-    }
-  ]
-}
-```
-
----
-
-## TikZ
-
-[TikZ](https://tikz.net/) is a powerful LaTeX-based drawing tool powered by [TikZJax](https://tikzjax.com/). You can easily port TikZ drawings from papers, posters, and notes. For example, we can use the following code to illustrate Euler’s formula $ e^{i \theta} = \cos \theta + i \sin \theta $:
-
-```markdown
-<script type="text/tikz">
-\begin{tikzpicture}
-    \filldraw[fill=cyan!10, draw=blue, thick] (0,0) circle (2cm);
-
-    \draw[->, thick] (-2.5,0) -- (2.5,0) node[right] {Re};
-    \draw[->, thick] (0,-2.5) -- (0,2.5) node[above] {Im};
-
-    \draw[->, thick, color=purple] (0,0) -- (1.5,1.5);
-    \node[color=purple] at (1.1, 1.7) {$e^{i\theta}$};
-
-    \draw[thick] (0.7,0) arc (0:45:0.7);
-    \node at (0.9, 0.3) {$\theta$};
-
-    \draw[dashed, color=gray] (1.5,1.5) -- (1.5,0) node[below, black] {$\cos \theta$};
-    \draw[dashed, color=gray] (1.5,1.5) -- (0,1.5) node[left, black] {$\sin \theta$};
-    \node at (2.2, 0) [below] {1};
-    \node at (0, 2.2) [left] {$i$};
-    \node at (1.5,1.5) [above right, color=blue] {$(\cos \theta \, \sin \theta)$};
-\end{tikzpicture}
-</script>
-```
-
-The rendered output is shown below, displayed as a vector graphic：
-
-<script type="text/tikz">
-\begin{tikzpicture}
-    \filldraw[fill=cyan!10, draw=blue, thick] (0,0) circle (2cm);
-
-    \draw[->, thick] (-2.5,0) -- (2.5,0) node[right] {Re};
-    \draw[->, thick] (0,-2.5) -- (0,2.5) node[above] {Im};
-
-    \draw[->, thick, color=purple] (0,0) -- (1.5,1.5);
-    \node[color=purple] at (1.1, 1.7) {$e^{i\theta}$};
-
-    \draw[thick] (0.7,0) arc (0:45:0.7);
-    \node at (0.9, 0.3) {$\theta$};
-
-    \draw[dashed, color=gray] (1.5,1.5) -- (1.5,0) node[below, black] {$\cos \theta$};
-    \draw[dashed, color=gray] (1.5,1.5) -- (0,1.5) node[left, black] {$\sin \theta$};
-    \node at (2.2, 0) [below] {1};
-    \node at (0, 2.2) [left] {$i$};
-    \node at (1.5,1.5) [above right, color=blue] {$(\cos \theta \, \sin \theta)$};
-\end{tikzpicture}
-</script>
-
----
-
-## Typograms
-
-[Typograms](https://google.github.io/typograms/) are a way of combining text and graphics to convey information in a clear and visually engaging manner. Typograms are particularly effective for illustrating simple diagrams, charts, and concept visuals where text and graphics are closely integrated. The following example demonstrates a simple Typogram:
-
-````
-```typograms
-             ___________________
-            /                  /|
-           /__________________/ |
-          |                  |  |
-          |     Distill      |  |
-          |                  |  |
-          |                  | /
-          |__________________|/
-```
-````
-
-The rendered output is shown below：
-
-```typograms
-             ___________________
-            /                  /|
-           /__________________/ |
-          |                  |  |
-          |     Distill      |  |
-          |                  |  |
-          |                  | /
-          |__________________|/
-```
-
----
-
-## Layouts
-
-The main text column is referred to as the body.
-It is the assumed layout of any direct descendants of the `d-article` element.
-
-<div class="fake-img l-body">
-  <p>.l-body</p>
+<!-- Pre-processed frequencies -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        <strong>Before Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/cartesian_impedance_controller/desired_pose @ 50Hz</p>
+    </div>
+    <div class="col-sm text-center">
+        <strong>Before Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/franka_state_controller/O_T_EE @ 607Hz</p>
+    </div>
 </div>
 
-For images you want to display a little larger, try `.l-page`:
-
-<div class="fake-img l-page">
-  <p>.l-page</p>
+<!-- Post-processed frequencies -->
+<div class="row mt-4">
+    <div class="col-sm text-center">
+        <strong>After Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/cartesian_impedance_controller/desired_pose @ 13Hz</p>
+    </div>
+    <div class="col-sm text-center">
+        <strong>After Sampling</strong>
+        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>/franka_state_controller/O_T_EE @ 13Hz</p>
+    </div>
 </div>
 
-All of these have an outset variant if you want to poke out from the body text a little bit.
-For instance:
-
-<div class="fake-img l-body-outset">
-  <p>.l-body-outset</p>
+<div class="caption mt-2 text-center">
+    Frequencies of both topics are aligned after applying our sampling algorithm, from highly different original rates (50Hz vs 607Hz) to a unified 13Hz (hyperparameter).
 </div>
 
-<div class="fake-img l-page-outset">
-  <p>.l-page-outset</p>
-</div>
 
-Occasionally you’ll want to use the full browser width.
-For this, use `.l-screen`.
-You can also inset the element a little from the edge of the browser by using the inset variant.
-
-<div class="fake-img l-screen">
-  <p>.l-screen</p>
-</div>
-<div class="fake-img l-screen-inset">
-  <p>.l-screen-inset</p>
-</div>
-
-The final layout is for marginalia, asides, and footnotes.
-It does not interrupt the normal flow of `.l-body` sized text except on mobile screen sizes.
-
-<div class="fake-img l-gutter">
-  <p>.l-gutter</p>
-</div>
-
----
-
-## Sidenotes
-
-Distill supports sidenotes, which are like footnotes but placed in the margin of the page.
-They are useful for providing additional context or references without interrupting the flow of the main text.
-
-There are two main ways to create a sidenote:
-
-**Using the `<aside>` tag:**
-
-The following code creates a sidenote with **_distill's styling_** in the margin:
-
-```html
-<aside><p>This is a sidenote using aside tag.</p></aside>
-```
-
-<aside><p> This is a sidenote using `&lt;aside&gt;` tag</p> </aside>
-
-We can also add images to sidenotes (click on the image to zoom in for a larger version):
-{% raw %}
-
-```html
-<aside>
-  {% include figure.liquid loading="eager" path="assets/img/rhino.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-  <p>
-    F.J. Cole, “The History of Albrecht Dürer’s Rhinoceros in Zoological Literature,” Science, Medicine, and History: Essays on the Evolution of
-    Scientific Thought and Medical Practice (London, 1953), ed. E. Ashworth Underwood, 337-356. From page 71 of Edward Tufte’s Visual Explanations.
-  </p>
-</aside>
-```
-
-{% endraw %}
-
-<aside>
-  {% include figure.liquid loading="eager" path="assets/img/rhino.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-  <p>F.J. Cole, “The History of Albrecht Dürer’s Rhinoceros in Zoological Literature,” Science, Medicine, and History: Essays on the Evolution of Scientific Thought and Medical Practice (London, 1953), ed. E. Ashworth Underwood, 337-356. From page 71 of Edward Tufte’s Visual Explanations.</p>
-</aside>
-
-Sidenotes can also contain equations and links:
-
-In physics, mass–energy equivalence is the relationship between mass and energy in a system's rest frame. The two differ only by a multiplicative constant and the units of measurement.
-
-<aside>
-  <p>This principle is defined by Einstein's famous equation: $E = mc^2$ <a href="https://en.wikipedia.org/wiki/Mass%E2%80%93energy_equivalence" target="_blank">(Source: Wikipedia)</a></p>
-</aside>
-
-**Using the `l-gutter` class:**
-
-The following code creates a sidenote with **_al-folio's styling_** in the margin:
-
-```html
-<div class="l-gutter"><p>This is a sidenote using l-gutter class.</p></div>
-```
-
-<div class="l-gutter">
-  <p> This is a sidenote using `l-gutter` class. </p>
-</div>
-
----
-
-## Other Typography?
-
-Emphasis, aka italics, with _asterisks_ (`*asterisks*`) or _underscores_ (`_underscores_`).
-
-Strong emphasis, aka bold, with **asterisks** or **underscores**.
-
-Combined emphasis with **asterisks and _underscores_**.
-
-Strikethrough uses two tildes. ~~Scratch this.~~
-
-1. First ordered list item
-2. Another item
-   ⋅⋅\* Unordered sub-list.
-3. Actual numbers don't matter, just that it's a number
-   ⋅⋅1. Ordered sub-list
-4. And another item.
-
-⋅⋅⋅You can have properly indented paragraphs within list items. Notice the blank line above, and the leading spaces (at least one, but we'll use three here to also align the raw Markdown).
-
-⋅⋅⋅To have a line break without a paragraph, you will need to use two trailing spaces.⋅⋅
-⋅⋅⋅Note that this line is separate, but within the same paragraph.⋅⋅
-⋅⋅⋅(This is contrary to the typical GFM line break behaviour, where trailing spaces are not required.)
-
-- Unordered list can use asterisks
-
-* Or minuses
-
-- Or pluses
-
-[I'm an inline-style link](https://www.google.com)
-
-[I'm an inline-style link with title](https://www.google.com "Google's Homepage")
-
-[I'm a reference-style link][Arbitrary case-insensitive reference text]
-
-[You can use numbers for reference-style link definitions][1]
-
-Or leave it empty and use the [link text itself].
-
-URLs and URLs in angle brackets will automatically get turned into links.
-http://www.example.com or <http://www.example.com> and sometimes
-example.com (but not on Github, for example).
-
-Some text to show that the reference links can follow later.
-
-[arbitrary case-insensitive reference text]: https://www.mozilla.org
-[1]: http://slashdot.org
-[link text itself]: http://www.reddit.com
-
-Here's our logo (hover to see the title text):
-
-Inline-style:
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
-
-Reference-style:
-![alt text][logo]
-
-[logo]: https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 2"
-
-Inline `code` has `back-ticks around` it.
-
-```javascript
-var s = "JavaScript syntax highlighting";
-alert(s);
-```
+**Here is the pseudo code for our sampling algorithm which ensures equal observations from all topics:**
 
 ```python
-s = "Python syntax highlighting"
-print s
+
+# Synchronize multiple topics to a target frequency
+
+start_time = min_timestamp(topics)
+end_time   = max_timestamp(topics)
+
+dt = 1 / target_freq
+t  = start_time
+
+while t <= end_time:
+    for topic in topics:
+        msg = select_message(topic, timestamp <= t) # the msg from the topic which has the greatest timestamp, but timestamp is <= t
+        topic_buffer[topic] = msg
+
+    combined_msgs = [topic_buffer[topic] for topic in topics]
+    t += dt
 ```
 
+You can find the sampler package here.[![GitHub Repo](https://img.shields.io/badge/GitHub-Sampler-blue?logo=github)](https://github.com/AnshPrakash/MimicPlay/tree/main/sampler)
+
+Further, we transform the data into robomimic style hdf5 format [![GitHub Repo](https://img.shields.io/badge/GitHub-rosbag2hdf5-blue?logo=github)](https://github.com/AnshPrakash/MimicPlay/tree/main/rosbag2hdf5)
+
+
+> The final teleoperation dataset, formatted in **robomimic style**, is now ready to be used in the training pipeline.
+
+
+
 ```
-No language indicated, so no syntax highlighting.
-But let's throw in a <b>tag</b>.
+FILE_CONTENTS {
+ group      /
+ group      /data
+ group      /data/demo_0
+ dataset    /data/demo_0/actions
+ group      /data/demo_0/obs
+ dataset    /data/demo_0/obs/O_T_EE
+ dataset    /data/demo_0/obs/back_camera
+ dataset    /data/demo_0/obs/ee_pose
+ dataset    /data/demo_0/obs/front_camera
+ dataset    /data/demo_0/obs/gripper_joint_states
+ dataset    /data/demo_0/obs/joint_states
+ dataset    /data/demo_0/obs/joint_states_desired
+ group      /data/demo_1
+ dataset    /data/demo_1/actions
+ group      /data/demo_1/obs
+ dataset    /data/demo_1/obs/O_T_EE
+ dataset    /data/demo_1/obs/back_camera
+ dataset    /data/demo_1/obs/ee_pose
+ dataset    /data/demo_1/obs/front_camera
+ dataset    /data/demo_1/obs/gripper_joint_states
+ dataset    /data/demo_1/obs/joint_states
+ dataset    /data/demo_1/obs/joint_states_desired
+ group      /mask
+ dataset    /mask/train
+}
 ```
 
-Colons can be used to align columns.
+---
 
-| Tables        |      Are      |  Cool |
-| ------------- | :-----------: | ----: |
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      |   centered    |   $12 |
-| zebra stripes |   are neat    |    $1 |
+<!-- Training process -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        <strong>Method</strong>
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
 
-There must be at least 3 dashes separating each header cell.
-The outer pipes (|) are optional, and you don't need to make the
-raw Markdown line up prettily. You can also use inline Markdown.
+<div class="caption mt-2 text-center">
+    Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
 
-| Markdown | Less      | Pretty     |
-| -------- | --------- | ---------- |
-| _Still_  | `renders` | **nicely** |
-| 1        | 2         | 3          |
+## High Level Latent Planner
+### Model
+With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
 
-> Blockquotes are very handy in email to emulate reply text.
-> This line is part of the same quote.
+To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
 
-Quote break.
+- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
+- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
+- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
 
-> This is a very long line that will still be quoted properly when it wraps. Oh boy let's keep writing to make sure this is long enough to actually wrap for everyone. Oh, you can _put_ **Markdown** into a blockquote.
+In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
 
-Here's a line for us to start with.
+### Latent plan
+Our high-level planner is formulated as a **latent plan generator**.  
+We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
+These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
+This hierarchical setup defines the high-level component as a latent plan rather than direct control.
 
-This line is separated from the one above by two newlines, so it will be a _separate paragraph_.
+### Multi-modality
+The training model takes **multi-modal inputs** to construct the high-level planner.  
+Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
+This setup allows the model to learn from both visual context and motion data when generating latent plans.
 
-This line is also a separate paragraph, but...
-This line is only separated by a single newline, so it's a separate line in the _same paragraph_.
+### Training
+
+#### Setup
+
+For the collected demonstration dataset, we used **one demo as the validation set**, while the remaining demos were used for **training**. The training was conducted following the **configuration provided in the reference paper**.
+For hyperparameters, we mainly relied on the **default settings from the official repository**, while performing **additional tuning** based on our own dataset to improve performance, e.g. "goal image range" and "std".
+
+#### Evaluation
+We evaluated the high-level planner using two metrics:
+
+1. **GMM likelihood probability (training phase)**  
+   During training, we monitored the **likelihood of the ground-truth data under the learned GMM model**. This serves as a measure of how well the model captures the distribution of the demonstrations.
+
+2. **Distance error (test phase)**  
+   On the test prompts, we computed the **distance error** between the predicted trajectories and the ground-truth hand positions. Since our high-level planner is a **probabilistic model**, we performed **multiple samples for each time step** in the sequence. The final error metric was obtained by averaging across the entire video sequence and across all samples.
+
+
+
+
+
+## Low Level Policy
+
+
+During **training**, the low-level policy receives a latent embedding of the robot’s trajectory from the high-level latent planner. This embedding provides rich contextual information, significantly reducing the need for large amounts of teleoperation data.
+
+During **testing**, the low-level policy instead receives a latent embedding of the human trajectory. This acts as a *human prompt*, guiding the robot to replicate the demonstrated actions. At the same time, the policy continuously collects observations from onboard cameras and proprioceptive signals (via ROS topics) at the desired frequency.
+
+Below is the pseudocode illustrating how the system acquires observations at a fixed frequency in the real robot setup:
+
+
+```python
+
+# Get observations at a desired frequency
+
+# 1. Compute how long we should wait between observations
+dt = 1 / target_frequency
+
+while not shutting_down():
+    # 2. Wait until *all* topics have fresh data newer than last_obs_time + dt
+    if all_topics_ready(threshold_time=last_obs_time + dt):
+        
+        # 3. Snapshot the latest messages and timestamps
+        msgs, times = snapshot_latest_messages()
+
+        # 4. Convert each message into a NumPy-friendly format
+        data = {topic: convert_to_numpy(msgs[topic]) for topic in msgs}
+
+        # 5. Update last observation time and return a dictionary
+        last_obs_time = min(times.values())
+        return {
+            "timestamp": last_obs_time,
+            "data": data,
+            "times": times,
+        }
+
+    # 6. Otherwise, wait briefly and try again
+    sleep_a_bit()
+```
+
+> Actual code for reference here [![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/b088a9c38e2cb60ba15d4b1b7c3e7edeb2698313/scripts/policy_controller.py#L345)
+
+
+In the original paper, the robot policy operated at 17 Hz. However, our ZED camera could capture observations at a maximum frequency of 14 Hz, which set the upper bound for our deployed policy. Ultimately, we chose to run the robot policy at 13 Hz.
+
+
+<!-- Low level policy -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/low-level-policy.drawio.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    The low-level policy receives a latent plan, image observations, and proprioceptive inputs, then samples an action from a multimodal Gaussian distribution. <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
+
+
+## Experiments
+
+### High Level Planner
+After completing the training of the high-level latent planner, we first collected **video prompts** and performed a **visual inspection of the predicted trajectories**. This step allowed us to qualitatively evaluate whether the generated trajectories aligned with the expected task goals and to compare them against the ground-truth trajectories from the demonstrations. Below we show example visualizations of the predicted trajectories。
+
+<div class="row mt-4">
+    <div class="col-sm text-center">
+        <!-- <strong>After Sampling</strong> -->
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/start_with_traj.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>current states of hand with 10 steps future trajectory</p>
+    </div>
+    <div class="col-sm text-center">
+        <!-- <strong>After Sampling</strong> -->
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/goal.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>goal states of hand</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0 text-center">
+    {% include video.liquid path="assets/video/high_level/single_view/traj_video.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
+  </div>
+</div>
+<div class="caption text-center">
+  trajectory through time steps
+</div>
+
+
+### Live system: Policy Controller 
+
+[![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/robot-policy/scripts/policy_controller.py)
+
+Below we present our evaluation results for the low-level policy. Although the success rate was 0%, we have developed a solid understanding of the underlying reasons for this outcome.
+
+Here is our evaluation video results:
+
+
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+      <h5>Human Prompts</h5>
+        {% include video.liquid path="assets/video/mimicplay/Human_prompts/data-2025-09-06_10-56-20/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+       <h5>Robot Policy Acting</h5>
+        {% include video.liquid path="assets/video/mimicplay/lowlevel-eval-policy_evaluation/robot-policy-eval-recordings/demo_0/data-2025-09-07_16-11-12/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/Human_prompts/data-2025-09-06_10-58-04/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/lowlevel-eval-policy_evaluation/robot-policy-eval-recordings/demo_2/data-2025-09-07_16-29-01/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/Human_prompts/data-2025-09-07_14-51-35_demo3/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+  <div class="col-sm mt-3 mt-md-0">
+      {% include video.liquid path="assets/video/mimicplay/lowlevel-eval-policy_evaluation/robot-policy-eval-recordings/demo_3/data-2025-09-07_15-51-07/zedA_zed_node_A_left_image_rect_color.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+  </div>
+</div>
+
+
+
+<div class="caption">
+    Left: Human prompts, Right: Robot policy acting
+</div>
+
+
+### Key Limitations Observed
+
+1. **High-Level Planner — Poor Embedding Quality**
+
+   * We found that the high-level planner produced **high prediction errors** for trajectories, which resulted in **poor latent embeddings**.
+   * Through hyperparameter tuning, we discovered that our dataset required **fewer modes** for accurate trajectory prediction.
+   * Due to these weak embeddings, the low-level policy experienced **high variance between similar trajectories**, preventing it from fully leveraging the advantages of human guidance.
+
+2. **Absence of Wrist Camera**
+
+   * There was a significant **distribution shift** between training and evaluation image inputs from the front and back cameras.
+   * The original authors used a **wrist-mounted camera**, which helped stabilize the robot policy.
+   * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
+
+
+
+---
+
+## Extension to Bimanual Tiago
+
+### Update to Hand Tracking system to two hands
+
+The current pretrained hand detection model is able to distinguish between the **left and right hands**. However, since our setup only uses **two calibrated camera views**, the detection results can vary significantly. One major challenge arises when the **two hands occlude each other**, in which case it may be impossible to reliably observe both hands in both camera views at the same time. This directly limits our ability to obtain accurate **3D hand position estimates** through triangulation.
+
+To address this issue, one potential approach we are exploring is **temporal interpolation**. Specifically, when a hand temporarily disappears due to occlusion, we use its **2D infomation before and after the disappearance** to interpolate the missing frames. By filling in these occluded intervals, we aim to maintain more consistent 3D hand trajectory estimation for bimanual tasks.
+
+---
+
+## Acknowledgements
+
+We would like to thank our supervisor, [Franziska Herbert](https://pearl-lab.com/people/franziska-herbert/), for her guidance and support throughout this project. We also extend our gratitude to the course organizer and the lab staff for providing the resources and assistance that made this work possible. Finally, we thank the authors of [**MimicPlay**](https://mimic-play.github.io/) for making their code publicly available.
+
+---
+
+
+
+### BibTeX
+
+```bibtex
+@misc{prakashzhou2025mimicplay,
+  author       = {Prakash, Ansh and Zhou, Xiaoqi},
+  title        = {MimicPlay on Franka Arm and its Extension},
+  year         = {2025},
+  howpublished = {\url{https://anshprakash.github.io/blog/2025/mimicplay/}},
+  note         = {IROBMAN Lab Blog}
+}
+```
+
+---
