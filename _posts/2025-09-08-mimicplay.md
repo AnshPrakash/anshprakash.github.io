@@ -142,6 +142,107 @@ Here is the code for teleoperation: [![GitHub Repo](https://img.shields.io/badge
 
 ### Human Play data
 
+We store the human play data in **mp4 format** with a frame rate of **20 FPS**. Afterwards, we apply some **post-processing** to convert it into the required **robomimic format**.
+
+1. **Hand detection**  
+   We use a pretrained hand detection model[![GitHub Repo](https://img.shields.io/badge/GitHub-handobj-blue?logo=github)](https://github.com/ddshan/hand_object_detector) to locate human hands in the video frames. In total, we collected **10 demonstrations**. After filtering, we discarded several demos where the hands could not be reliably detected.
+
+2. **3D triangulation and dataset conversion**  
+   Using the **calibrated stereo camera setup** (two synchronized viewpoints), we triangulate the detected hand positions to obtain their **3D coordinates in the world frame**. These 3D hand trajectories are then converted into the **robomimic dataset format**.
+
+Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system. Below is the detection code used for this visualization check:
+
+```python
+out_dir = "buffer/Slow_version_Human_prompts_0"
+os.makedirs(out_dir, exist_ok=True)
+# --- Load HDF5 ---
+hdf5_path = "/home/xiaoqi/MimicPlay/mimicplay/datasets/playdata/Slow_version_Human_prompts/demo_0_new.hdf5"   # update with your file path
+with h5py.File(hdf5_path, "r") as f:
+    # Extract robot0 end-effector positions (605, 1, 3)
+    eef_pos = f["data/demo_0/obs/robot0_eef_pos"][:]  # shape (605,1,3)
+    eef_pos = eef_pos.squeeze(axis=1)  # now (605, 3)
+
+    # Extract images if needed
+    agentview_img = f["data/demo_0/obs/agentview_image"][:] 
+    agentview_img2 = f["data/demo_0/obs/agentview_image_2"][:] 
+
+# --- Save raw 3D positions ---
+np.savetxt(os.path.join(out_dir, "robot0_eef_pos.txt"), eef_pos, fmt="%.6f")
+
+ZEDA_LEFT_CAM = CameraModel(
+    fx=1059.9764404296875,
+    fy=1059.9764404296875,
+    cx=963.07568359375,
+    cy=522.3530883789062,
+    R_wc=R.from_quat([-0.404974467935380, -0.808551385290863, 0.425767747250020, 0.031018753461827]).as_matrix(),
+    t_wc=np.array([0.903701253331141, 0.444249176547482, 0.598645500102408])
+)
+
+ZEDB_RIGHT_CAM = CameraModel(
+    fx=1060.0899658203125,
+    fy=1059.0899658203125,
+    cx=958.9099731445312,
+    cy=561.5670166015625,
+    R_wc=R.from_quat([0.81395177, -0.40028226, -0.07631803, -0.41404371]).as_matrix(),
+    t_wc=np.array([0.11261126, -0.52195948, 0.55795671])
+)
+
+# scale factor from 1920x1080 -> 640x360
+sx = 640.0 / 1920.0   # = 1/3
+sy = 360.0 / 1080.0   # = 1/3
+
+ZEDA_LEFT_CAM  = ZEDA_LEFT_CAM.scaled(sx, sy)
+ZEDB_RIGHT_CAM = ZEDB_RIGHT_CAM.scaled(sx, sy)
+
+
+# --- Project and overlay ---
+left_count, right_count = 0, 0         
+both_count, none_count = 0, 0          
+
+for i, (pos, img1, img2) in enumerate(tqdm(zip(eef_pos, agentview_img, agentview_img2), total=len(eef_pos))):
+    uv1 = ZEDA_LEFT_CAM.project_point(pos).astype(int)
+    uv2 = ZEDB_RIGHT_CAM.project_point(pos).astype(int)
+
+    img1_draw = img1.copy()
+    img2_draw = img2.copy()
+
+    inside1, inside2 = False, False
+
+    if 0 <= uv1[0] < img1_draw.shape[1] and 0 <= uv1[1] < img1_draw.shape[0]:
+        cv2.circle(img1_draw, (uv1[0], uv1[1]), radius=5, color=(0, 255, 0), thickness=-1)
+        inside1 = True
+        left_count += 1
+
+    if 0 <= uv2[0] < img2_draw.shape[1] and 0 <= uv2[1] < img2_draw.shape[0]:
+        cv2.circle(img2_draw, (uv2[0], uv2[1]), radius=5, color=(0, 255, 0), thickness=-1)
+        inside2 = True
+        right_count += 1
+
+    # wrap
+    if inside1 and inside2:
+        both_count += 1
+    elif not inside1 and not inside2:
+        none_count += 1
+
+    out1 = os.path.join(out_dir, f"agentview1_{i:04d}.png")
+    out2 = os.path.join(out_dir, f"agentview2_{i:04d}.png")
+
+    cv2.imwrite(out1, cv2.cvtColor(img1_draw, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(out2, cv2.cvtColor(img2_draw, cv2.COLOR_RGB2BGR))
+
+    print(f"[Frame {i}] saved → {out1}, {out2} | inside1={inside1}, inside2={inside2}")
+
+# statistic results
+print("========== check and statistical results ==========")
+print(f"left detecting: {left_count}")
+print(f"right detecting: {right_count}")
+print(f"both detecting: {both_count}")
+print(f"both not detecting: {none_count}")
+print(f"total numbers:   {len(eef_pos)}")
+print(f"Saved projections and images in '{out_dir}/'")
+```
+
+
 
 ### Low level Teleoperation Data
 
@@ -268,6 +369,45 @@ FILE_CONTENTS {
 </div>
 
 ## High Level Latent Planner
+### Model
+With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
+
+To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
+
+- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
+- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
+- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
+
+In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
+
+### Latent plan
+Our high-level planner is formulated as a **latent plan generator**.  
+We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
+These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
+This hierarchical setup defines the high-level component as a latent plan rather than direct control.
+
+### Multi-modality
+The training model takes **multi-modal inputs** to construct the high-level planner.  
+Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
+This setup allows the model to learn from both visual context and motion data when generating latent plans.
+
+### Training
+
+#### Setup
+
+For the collected demonstration dataset, we used **one demo as the validation set**, while the remaining demos were used for **training**. The training was conducted following the **configuration provided in the reference paper**.
+For hyperparameters, we mainly relied on the **default settings from the official repository**, while performing **additional tuning** based on our own dataset to improve performance, e.g. "goal image range" and "std".
+
+#### Evaluation
+We evaluated the high-level planner using two metrics:
+
+1. **GMM likelihood probability (training phase)**  
+   During training, we monitored the **likelihood of the ground-truth data under the learned GMM model**. This serves as a measure of how well the model captures the distribution of the demonstrations.
+
+2. **Distance error (test phase)**  
+   On the test prompts, we computed the **distance error** between the predicted trajectories and the ground-truth hand positions. Since our high-level planner is a **probabilistic model**, we performed **multiple samples for each time step** in the sequence. The final error metric was obtained by averaging across the entire video sequence and across all samples.
+
+
 
 
 
@@ -325,6 +465,34 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 
 <div class="caption mt-2 text-center">
     The low-level policy receives a latent plan, image observations, and proprioceptive inputs, then samples an action from a multimodal Gaussian distribution. <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
+
+
+## Experiments
+
+### High Level Planner
+After completing the training of the high-level latent planner, we first collected **video prompts** and performed a **visual inspection of the predicted trajectories**. This step allowed us to qualitatively evaluate whether the generated trajectories aligned with the expected task goals and to compare them against the ground-truth trajectories from the demonstrations. Below we show example visualizations of the predicted trajectories。
+
+<div class="row mt-4">
+    <div class="col-sm text-center">
+        <!-- <strong>After Sampling</strong> -->
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/start_with_traj.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>current states of hand with 10 steps future trajectory</p>
+    </div>
+    <div class="col-sm text-center">
+        <!-- <strong>After Sampling</strong> -->
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/goal.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>goal states of hand</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0 text-center">
+    {% include video.liquid path="assets/video/high_level/single_view/traj_video.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
+  </div>
+</div>
+<div class="caption text-center">
+  trajectory through time steps
 </div>
 
 
@@ -387,12 +555,17 @@ Here is our evaluation video results:
    * The original authors used a **wrist-mounted camera**, which helped stabilize the robot policy.
    * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
 
+
+
 ---
 
+## Extension to Bimanual Tiago
 
+### Update to Hand Tracking system to two hands
 
+The current pretrained hand detection model is able to distinguish between the **left and right hands**. However, since our setup only uses **two calibrated camera views**, the detection results can vary significantly. One major challenge arises when the **two hands occlude each other**, in which case it may be impossible to reliably observe both hands in both camera views at the same time. This directly limits our ability to obtain accurate **3D hand position estimates** through triangulation.
 
-
+To address this issue, one potential approach we are exploring is **temporal interpolation**. Specifically, when a hand temporarily disappears due to occlusion, we use its **2D infomation before and after the disappearance** to interpolate the missing frames. By filling in these occluded intervals, we aim to maintain more consistent 3D hand trajectory estimation for bimanual tasks.
 
 ---
 
