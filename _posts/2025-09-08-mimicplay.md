@@ -416,6 +416,22 @@ We evaluated the high-level planner using two metrics:
 
 During **training**, the low-level policy receives a latent embedding of the robot’s trajectory from the high-level latent planner. This embedding provides rich contextual information, significantly reducing the need for large amounts of teleoperation data.
 
+Additionally, we used `negative log likelihood` loss for training the models.
+
+<!-- Training low level planner -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/low-level-training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Loss curve for training low-level policy</p>
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    Divergence between validation and training loss after epoch 16 occurs due to the poor performance of the high-level planner, which was unable to generalize well across similar trajectories.
+</div>
+
+
+
 During **testing**, the low-level policy instead receives a latent embedding of the human trajectory. This acts as a *human prompt*, guiding the robot to replicate the demonstrated actions. At the same time, the policy continuously collects observations from onboard cameras and proprioceptive signals (via ROS topics) at the desired frequency.
 
 Below is the pseudocode illustrating how the system acquires observations at a fixed frequency in the real robot setup:
@@ -471,6 +487,7 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 ## Experiments
 
 ### High Level Planner
+
 After completing the training of the high-level latent planner, we first collected **video prompts** and performed a **visual inspection of the predicted trajectories**. This step allowed us to qualitatively evaluate whether the generated trajectories aligned with the expected task goals and to compare them against the ground-truth trajectories from the demonstrations. Below we show example visualizations of the predicted trajectories。
 
 <div class="row mt-4">
