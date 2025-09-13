@@ -117,11 +117,9 @@ long-horizon tasks: *hierarchical imitation learning* and *learning from play da
     </div>
 </div>
 <div class="caption">
-    Fig1: Humans can complete long-horizon tasks much faster than teleoperated robots. Inspired by this, MIMICPLAY<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> is implemented as a hierarchical imitation learning framework that learns high-level planning from inexpensive human play data and low-level control policies from a small set of multi-task teleoperated robot demonstrations.
+    Fig1<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>: Humans can complete long-horizon tasks much faster than teleoperated robots. Inspired by this, MIMICPLAY<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> is implemented as a hierarchical imitation learning framework that learns high-level planning from inexpensive human play data and low-level control policies from a small set of multi-task teleoperated robot demonstrations.
 </div>
 
-
-### MimicPlay
 
 MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> suggests that data for learning both high-level planning and low-level control can take various forms, potentially lowering the cost of imitation learning for complex, long-horizon tasks.
 
@@ -167,6 +165,35 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
 
 
 ---
+
+## MimicPlay
+
+### High Level Latent Planner
+
+### Model
+With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
+
+To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
+
+- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
+- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
+- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
+
+In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
+
+### Latent plan
+Our high-level planner is formulated as a **latent plan generator**.  
+We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
+These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
+This hierarchical setup defines the high-level component as a latent plan rather than direct control.
+
+### Multi-modality
+The training model takes **multi-modal inputs** to construct the high-level planner.  
+Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
+This setup allows the model to learn from both visual context and motion data when generating latent plans.
+
+
+# Implementation
 
 ## Franka Teleoperation system
 
@@ -423,27 +450,6 @@ FILE_CONTENTS {
 </div>
 
 ## High Level Latent Planner
-### Model
-With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
-
-To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
-
-- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
-- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
-- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
-
-In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
-
-### Latent plan
-Our high-level planner is formulated as a **latent plan generator**.  
-We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
-These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
-This hierarchical setup defines the high-level component as a latent plan rather than direct control.
-
-### Multi-modality
-The training model takes **multi-modal inputs** to construct the high-level planner.  
-Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
-This setup allows the model to learn from both visual context and motion data when generating latent plans.
 
 ### Training
 
