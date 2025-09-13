@@ -102,6 +102,7 @@ _styles: >
 
 ## Introduction
 
+Teaching robots to carry out general-purpose manipulation tasks efficiently has been a long-standing challenge. Recent advances in Imitation Learning (IL) have made notable progress toward this objective, particularly through supervised training with human teleoperation demonstrations or expert policy trajectories <d-cite key="pomerleau1988alvinn"> </d-cite> <d-cite key="zhang2018deep"> </d-cite> .
 
 ---
 
@@ -484,6 +485,10 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 </div>
 
 
+# Differences in the original Setup and our Setup
+
+
+
 ## Experiments
 
 ### High Level Planner
@@ -513,7 +518,7 @@ After completing the training of the high-level latent planner, we first collect
 </div>
 
 
-### Live system: Policy Controller 
+### Low-Level Policy — Policy Controller (Live System)
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/robot-policy/scripts/policy_controller.py)
 
@@ -576,7 +581,7 @@ Here is our evaluation video results:
 
 ---
 
-## Extension to Bimanual Tiago
+## Extension to Bimanual Tiago — Future Work
 
 ### Update to Hand Tracking system to two hands
 
@@ -591,7 +596,7 @@ We can use a Kalman filter to estimate the position of the occluded part by mode
 
 Only minor changes to the model are required to enable it for a bimanual scenario. Specifically, the action dimension needs to be doubled to account for the additional arm, and more observations must be added to track the positions of both end-effectors. The more challenging aspect lies in fine-tuning hyperparameters—such as the number of modes in the GMM decoder of the high-level planner—since data multimodality increases with two arms.
 
-
+---
 
 # Conclusion
 
