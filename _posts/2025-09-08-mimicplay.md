@@ -99,19 +99,60 @@ _styles: >
     font-size: 16px;
   }
 ---
-
 ## Introduction
 
 Teaching robots to carry out general-purpose manipulation tasks efficiently has been a long-standing challenge. Recent advances in Imitation Learning (IL) have made notable progress toward this objective, particularly through supervised training with human teleoperation demonstrations or expert policy trajectories <d-cite key="pomerleau1988alvinn"> </d-cite> <d-cite key="zhang2018deep"> </d-cite> .
+Although promising, imitation learning has mostly been restricted to short-horizon skills, as collecting demonstrations for long-horizon, real-world tasks is time-consuming and labor-intensive.
+Two connected directions have emerged in recent literature to scale up imitation learning to complex
+long-horizon tasks: *hierarchical imitation learning* and *learning from play data*.
+1. **Hierarchical imitation learning** improves sample efficiency by breaking down end-to-end deep imitation learning into two stages: learning high-level planners and low-level visuomotor controllers  <d-cite key="mandlekar2020learning"> </d-cite> <d-cite key="shiarlis2018taco"> </d-cite> .
+
+2. **Learning from play data** uses a different type of robot training data known as play data <d-cite key="lynch2020play"> </d-cite>, which is collected via human-operated robots exploring their environment without explicit task instructions. Such data captures more diverse behaviors and situations than task-specific demonstrations <d-cite key="lynch2020play"> </d-cite> <d-cite key="cui2022play"> </d-cite>. Methods that leverage play data typically train hierarchical policies, where the high-level planner models intent and the low-level controllers handle goal-directed actions <d-cite key="lynch2020play"> </d-cite>. Nonetheless, collecting real-world play data is resource-intensive; for instance, C-BeT <d-cite key="cui2022play"> </d-cite> requires 4.5 hours of play data for manipulation skills in one scene, while TACO-RL <d-cite key="rosete2022latent"> </d-cite> needs 6 hours for a single 3D tabletop environment.
+
+
+<!-- Ease of collecting human play data -->
+<div class="row mt-3">
+    <div class="col-sm text-center" id="fig:humanplay-collection" >
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/scale_data.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption">
+    Fig1: Humans can complete long-horizon tasks much faster than teleoperated robots. Inspired by this, MIMICPLAY<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> is implemented as a hierarchical imitation learning framework that learns high-level planning from inexpensive human play data and low-level control policies from a small set of multi-task teleoperated robot demonstrations.
+</div>
+
+
+### MimicPlay
+
+MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> suggests that data for learning both high-level planning and low-level control can take various forms, potentially lowering the cost of imitation learning for complex, long-horizon tasks.
+
+Building on this idea, the authors propose a learning paradigm where robots acquire high-level plans from human play data, in which humans freely interact with the environment using their hands. This type of data is faster and easier to gather than robot teleoperation data, enabling large-scale collection that captures a wide range of behaviors and scenarios <a href="#fig:humanplay-collection">Fig 1</a>.
+
+Subsequently, the robot learns low-level manipulation policies from a limited set of demonstrations collected via human teleoperation. While demonstration data is more expensive to obtain, it avoids the challenges arising from differences between human and robot embodiments.
+
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/mimic-play-inspiration.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>    
+
+<div class="row mt-3">
+  <div class="col-sm text-center">
+      {% include figure.liquid loading="eager" path="assets/img/mimicplay/mimicplay-fillgap.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+  </div>
+</div>
+
+<div class="caption">
+    Human is able to complete a long-horizon task much faster than a teleoperated robot. This observation is the inspiration for MimicPlay, a hierarchical imitation learning algorithm that learns a high-level planner from cheap human play data and a low-level control policy from a small amount of multi-task teleoperated robot demonstrations.
+</div>
+
+
+
 
 ---
 
 ## Related Works
 
-
----
-
-## MimicPlay
 
 ---
 
@@ -359,7 +400,7 @@ FILE_CONTENTS {
 
 <!-- Training process -->
 <div class="row mt-3">
-    <div class="col-sm text-center">
+    <div class="col-sm text-left">
         <strong>Method</strong>
         {% include figure.liquid loading="eager" path="assets/img/mimicplay/training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
     </div>

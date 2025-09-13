@@ -1,0 +1,4 @@
+/* assets/css/custom.css */
+main.container {
+    max-width: 1200px; /* increase from default ~750px */
+}
