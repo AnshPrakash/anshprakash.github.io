@@ -153,6 +153,18 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
 
 ## Related Works
 
+**Imitation learning from demonstrations**: Imitation Learning (IL) enables robots to perform various manipulation tasks <d-cite key="calinon2010learning"></d-cite>, <d-cite key="ijspeert2002movement"></d-cite> , <d-cite key="schaal1999imitation"></d-cite> , <d-cite key="kober2010imitation"></d-cite> , <d-cite key="englert2018manipulation"></d-cite> , <d-cite key="finn2017oneshot"></d-cite> , <d-cite key="billard2008rpd"></d-cite> , <d-cite key="argall2009survey"></d-cite> . Classical methods like DMP and PrMP <d-cite key="schaal2006dmp"></d-cite>, <d-cite key="kober2009primitives"></d-cite>, <d-cite key="paraschos2013promp"></d-cite>, <d-cite key="paraschos2018promp"></d-cite> are sample-efficient but limited with high-dimensional inputs and closed-loop control. Deep IL approaches <d-cite key="mandlekar2021offline"></d-cite>, <d-cite key="zhang2018deep"></d-cite>, <d-cite key="mandlekar2020learning"></d-cite>, <d-cite key="lynch2020grounding"></d-cite>, <d-cite key="reed2022gato"></d-cite>, <d-cite key="lee2022multimodal"></d-cite>, <d-cite key="shridhar2022cliport"></d-cite>  offer more flexibility but require many human demonstrations, which is labor-intensive <d-cite key="jang2022bcz"></d-cite>, <d-cite key="shafiullah2022robosuite"></d-cite>. MimicPlay reduces this burden by leveraging easily collected human play data, minimizing the need for on-robot demonstrations.
+
+**Hierarchical imitation learning** Previous methods for hierarchical policy learning relied solely on costly teleoperated robot demonstrations for both planning and control. In contrast, Mimicplay's approach combines inexpensive human play data for high-level planning with a small amount of robot demonstrations for low-level control, improving planning ability while reducing data requirements.
+
+
+
+**Learning from human videos**  Previous work has explored using large-scale human video data to support robot policy learning , with approaches like R3M <d-cite key="tobin2017domain"></d-cite> and MVP <d-cite key="andrychowicz2020learning"></d-cite> leveraging the Ego4D dataset <d-cite key="akkaya2019solving"></d-cite>  to pretrain visual representations. However, domain diversity makes transferring these features to specific manipulation tasks difficult, and even simple augmentations can be similarly effective <d-cite key="rahmatizadeh2018vision"></d-cite> . To reduce this gap, some methods use in-domain human videos, enabling sample-efficient reward shaping and imitation learning, though they mainly extract rewards or features rather than aiding low-level action generation. In contrast, Mimicplay's work derives trajectory-level task plans from human play data, offering high-level guidance that improves low-level control in long-horizon manipulation tasks.
+
+
+
+**Learning from play data** The proposed approach extends prior work on learning from play <d-cite key="yu2018one"></d-cite>, <d-cite key="lynch2020play"></d-cite>, <d-cite key="cui2022play"></d-cite> by replacing labor-intensive teleoperated play data with human play data collected through freehand interactions with the environment. This strategy provides rich trajectory-level guidance in only minutes, enabling robots to master complex long-horizon tasks with less than 30 minutes of teleoperation data.
+
 
 ---
 
