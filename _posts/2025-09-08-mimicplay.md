@@ -99,20 +99,101 @@ _styles: >
     font-size: 16px;
   }
 ---
-
 ## Introduction
+
+Teaching robots to carry out general-purpose manipulation tasks efficiently has been a long-standing challenge. Recent advances in Imitation Learning (IL) have made notable progress toward this objective, particularly through supervised training with human teleoperation demonstrations or expert policy trajectories <d-cite key="pomerleau1988alvinn"> </d-cite> <d-cite key="zhang2018deep"> </d-cite> .
+Although promising, imitation learning has mostly been restricted to short-horizon skills, as collecting demonstrations for long-horizon, real-world tasks is time-consuming and labor-intensive.
+Two connected directions have emerged in recent literature to scale up imitation learning to complex
+long-horizon tasks: *hierarchical imitation learning* and *learning from play data*.
+1. **Hierarchical imitation learning** improves sample efficiency by breaking down end-to-end deep imitation learning into two stages: learning high-level planners and low-level visuomotor controllers  <d-cite key="mandlekar2020learning"> </d-cite> <d-cite key="shiarlis2018taco"> </d-cite> .
+
+2. **Learning from play data** uses a different type of robot training data known as play data <d-cite key="lynch2020play"> </d-cite>, which is collected via human-operated robots exploring their environment without explicit task instructions. Such data captures more diverse behaviors and situations than task-specific demonstrations <d-cite key="lynch2020play"> </d-cite> <d-cite key="cui2022play"> </d-cite>. Methods that leverage play data typically train hierarchical policies, where the high-level planner models intent and the low-level controllers handle goal-directed actions <d-cite key="lynch2020play"> </d-cite>. Nonetheless, collecting real-world play data is resource-intensive; for instance, C-BeT <d-cite key="cui2022play"> </d-cite> requires 4.5 hours of play data for manipulation skills in one scene, while TACO-RL <d-cite key="rosete2022latent"> </d-cite> needs 6 hours for a single 3D tabletop environment.
+
+
+<!-- Ease of collecting human play data -->
+<div class="row mt-3">
+    <div class="col-sm text-center" id="fig:humanplay-collection" >
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/scale_data.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption">
+    Fig1<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>: Humans can complete long-horizon tasks much faster than teleoperated robots. Inspired by this, MIMICPLAY<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> is implemented as a hierarchical imitation learning framework that learns high-level planning from inexpensive human play data and low-level control policies from a small set of multi-task teleoperated robot demonstrations.
+</div>
+
+
+MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite> suggests that data for learning both high-level planning and low-level control can take various forms, potentially lowering the cost of imitation learning for complex, long-horizon tasks.
+
+Building on this idea, the authors propose a learning paradigm where robots acquire high-level plans from human play data, in which humans freely interact with the environment using their hands. This type of data is faster and easier to gather than robot teleoperation data, enabling large-scale collection that captures a wide range of behaviors and scenarios <a href="#fig:humanplay-collection">Fig 1</a>.
+
+Subsequently, the robot learns low-level manipulation policies from a limited set of demonstrations collected via human teleoperation. While demonstration data is more expensive to obtain, it avoids the challenges arising from differences between human and robot embodiments.
+
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/mimic-play-inspiration.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>    
+
+<div class="row mt-3">
+  <div class="col-sm text-center">
+      {% include figure.liquid loading="eager" path="assets/img/mimicplay/mimicplay-fillgap.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+  </div>
+</div>
+
+<div class="caption">
+    Human is able to complete a long-horizon task much faster than a teleoperated robot. This observation is the inspiration for MimicPlay, a hierarchical imitation learning algorithm that learns a high-level planner from cheap human play data and a low-level control policy from a small amount of multi-task teleoperated robot demonstrations.
+</div>
+
+
 
 
 ---
 
 ## Related Works
 
+**Imitation learning from demonstrations**: Imitation Learning (IL) enables robots to perform various manipulation tasks <d-cite key="calinon2010learning"></d-cite>, <d-cite key="ijspeert2002movement"></d-cite> , <d-cite key="schaal1999imitation"></d-cite> , <d-cite key="kober2010imitation"></d-cite> , <d-cite key="englert2018manipulation"></d-cite> , <d-cite key="finn2017oneshot"></d-cite> , <d-cite key="billard2008rpd"></d-cite> , <d-cite key="argall2009survey"></d-cite> . Classical methods like DMP and PrMP <d-cite key="schaal2006dmp"></d-cite>, <d-cite key="kober2009primitives"></d-cite>, <d-cite key="paraschos2013promp"></d-cite>, <d-cite key="paraschos2018promp"></d-cite> are sample-efficient but limited with high-dimensional inputs and closed-loop control. Deep IL approaches <d-cite key="mandlekar2021offline"></d-cite>, <d-cite key="zhang2018deep"></d-cite>, <d-cite key="mandlekar2020learning"></d-cite>, <d-cite key="lynch2020grounding"></d-cite>, <d-cite key="reed2022gato"></d-cite>, <d-cite key="lee2022multimodal"></d-cite>, <d-cite key="shridhar2022cliport"></d-cite>  offer more flexibility but require many human demonstrations, which is labor-intensive <d-cite key="jang2022bcz"></d-cite>, <d-cite key="shafiullah2022robosuite"></d-cite>. MimicPlay reduces this burden by leveraging easily collected human play data, minimizing the need for on-robot demonstrations.
+
+**Hierarchical imitation learning** Previous methods for hierarchical policy learning relied solely on costly teleoperated robot demonstrations for both planning and control. In contrast, Mimicplay's approach combines inexpensive human play data for high-level planning with a small amount of robot demonstrations for low-level control, improving planning ability while reducing data requirements.
+
+
+
+**Learning from human videos**  Previous work has explored using large-scale human video data to support robot policy learning , with approaches like R3M <d-cite key="tobin2017domain"></d-cite> and MVP <d-cite key="andrychowicz2020learning"></d-cite> leveraging the Ego4D dataset <d-cite key="akkaya2019solving"></d-cite>  to pretrain visual representations. However, domain diversity makes transferring these features to specific manipulation tasks difficult, and even simple augmentations can be similarly effective <d-cite key="rahmatizadeh2018vision"></d-cite> . To reduce this gap, some methods use in-domain human videos, enabling sample-efficient reward shaping and imitation learning, though they mainly extract rewards or features rather than aiding low-level action generation. In contrast, Mimicplay's work derives trajectory-level task plans from human play data, offering high-level guidance that improves low-level control in long-horizon manipulation tasks.
+
+
+
+**Learning from play data** The proposed approach extends prior work on learning from play <d-cite key="yu2018one"></d-cite>, <d-cite key="lynch2020play"></d-cite>, <d-cite key="cui2022play"></d-cite> by replacing labor-intensive teleoperated play data with human play data collected through freehand interactions with the environment. This strategy provides rich trajectory-level guidance in only minutes, enabling robots to master complex long-horizon tasks with less than 30 minutes of teleoperation data.
+
 
 ---
 
 ## MimicPlay
 
----
+### High Level Latent Planner
+
+### Model
+With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
+
+To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
+
+- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
+- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
+- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
+
+In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
+
+### Latent plan
+Our high-level planner is formulated as a **latent plan generator**.  
+We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
+These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
+This hierarchical setup defines the high-level component as a latent plan rather than direct control.
+
+### Multi-modality
+The training model takes **multi-modal inputs** to construct the high-level planner.  
+Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
+This setup allows the model to learn from both visual context and motion data when generating latent plans.
+
+
+# Implementation
 
 ## Franka Teleoperation system
 
@@ -358,7 +439,7 @@ FILE_CONTENTS {
 
 <!-- Training process -->
 <div class="row mt-3">
-    <div class="col-sm text-center">
+    <div class="col-sm text-left">
         <strong>Method</strong>
         {% include figure.liquid loading="eager" path="assets/img/mimicplay/training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
     </div>
@@ -369,27 +450,6 @@ FILE_CONTENTS {
 </div>
 
 ## High Level Latent Planner
-### Model
-With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
-
-To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
-
-- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
-- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
-- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
-
-In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
-
-### Latent plan
-Our high-level planner is formulated as a **latent plan generator**.  
-We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
-These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
-This hierarchical setup defines the high-level component as a latent plan rather than direct control.
-
-### Multi-modality
-The training model takes **multi-modal inputs** to construct the high-level planner.  
-Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
-This setup allows the model to learn from both visual context and motion data when generating latent plans.
 
 ### Training
 
@@ -415,6 +475,22 @@ We evaluated the high-level planner using two metrics:
 
 
 During **training**, the low-level policy receives a latent embedding of the robot’s trajectory from the high-level latent planner. This embedding provides rich contextual information, significantly reducing the need for large amounts of teleoperation data.
+
+Additionally, we used `negative log likelihood` loss for training the models.
+
+<!-- Training low level planner -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/low-level-training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Loss curve for training low-level policy</p>
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    Divergence between validation and training loss after epoch 16 occurs due to the poor performance of the high-level planner, which was unable to generalize well across similar trajectories.
+</div>
+
+
 
 During **testing**, the low-level policy instead receives a latent embedding of the human trajectory. This acts as a *human prompt*, guiding the robot to replicate the demonstrated actions. At the same time, the policy continuously collects observations from onboard cameras and proprioceptive signals (via ROS topics) at the desired frequency.
 
@@ -468,9 +544,14 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 </div>
 
 
+# Differences in the original Setup and our Setup
+
+
+
 ## Experiments
 
 ### High Level Planner
+
 After completing the training of the high-level latent planner, we first collected **video prompts** and performed a **visual inspection of the predicted trajectories**. This step allowed us to qualitatively evaluate whether the generated trajectories aligned with the expected task goals and to compare them against the ground-truth trajectories from the demonstrations. Below we show example visualizations of the predicted trajectories。
 
 <div class="row mt-4">
@@ -496,7 +577,7 @@ After completing the training of the high-level latent planner, we first collect
 </div>
 
 
-### Live system: Policy Controller 
+### Low-Level Policy — Policy Controller (Live System)
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/robot-policy/scripts/policy_controller.py)
 
@@ -559,13 +640,26 @@ Here is our evaluation video results:
 
 ---
 
-## Extension to Bimanual Tiago
+## Extension to Bimanual Tiago — Future Work
 
 ### Update to Hand Tracking system to two hands
 
 The current pretrained hand detection model is able to distinguish between the **left and right hands**. However, since our setup only uses **two calibrated camera views**, the detection results can vary significantly. One major challenge arises when the **two hands occlude each other**, in which case it may be impossible to reliably observe both hands in both camera views at the same time. This directly limits our ability to obtain accurate **3D hand position estimates** through triangulation.
 
 To address this issue, one potential approach we are exploring is **temporal interpolation**. Specifically, when a hand temporarily disappears due to occlusion, we use its **2D infomation before and after the disappearance** to interpolate the missing frames. By filling in these occluded intervals, we aim to maintain more consistent 3D hand trajectory estimation for bimanual tasks.
+
+We can use a Kalman filter to estimate the position of the occluded part by modeling the trajectory of the hand with a simple linear dynamics model.
+
+
+### High-level planner & Low-level planner - Bimanual
+
+Only minor changes to the model are required to enable it for a bimanual scenario. Specifically, the action dimension needs to be doubled to account for the additional arm, and more observations must be added to track the positions of both end-effectors. The more challenging aspect lies in fine-tuning hyperparameters—such as the number of modes in the GMM decoder of the high-level planner—since data multimodality increases with two arms.
+
+---
+
+# Conclusion
+
+
 
 ---
 
