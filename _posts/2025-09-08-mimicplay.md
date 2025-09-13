@@ -170,6 +170,8 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
 
 ### High Level Latent Planner
 
+
+
 ### Model
 With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
 
@@ -186,6 +188,16 @@ Our high-level planner is formulated as a **latent plan generator**.
 We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
 These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
 This hierarchical setup defines the high-level component as a latent plan rather than direct control.
+
+<!-- Training low level planner -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/latent-planner.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    **Latent planner processing a human prompt**: The planner operates in a sliding-window manner, taking the current observation image and the goal image provided by the human prompt. It encodes these into latent vectors for the start and goal, which are updated continuously as the end-effector progresses toward the target.
+</div>
 
 ### Multi-modality
 The training model takes **multi-modal inputs** to construct the high-level planner.  
