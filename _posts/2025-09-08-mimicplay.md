@@ -1,7 +1,7 @@
 ---
 layout: distill
 title: MimicPlay on Franka Arm and its Extension
-description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.
+description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies. Original - https://mimic-play.github.io/
 tags: Imitation-Learning, Learning-from-Human, Long-Horizon-Manipulation, pearl-lab
 date: 2025-09-14
 citation: true
@@ -53,7 +53,7 @@ toc:
     subsections:
       - name: High-Level Planner
       - name: Low-Level Policy - Policy Controller (Live system)
-  - name: Extension to Bimanual Tiago
+  - name: Extension to Bimanual Tiago — Future Work
     subsections:
       - name: Update to Hand Tracking system to two hands
       - name: High Level Planner
