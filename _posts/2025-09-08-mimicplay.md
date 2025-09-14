@@ -263,17 +263,61 @@ Here is the code for teleoperation: [![GitHub Repo](https://img.shields.io/badge
 ### Data Collection Pipeline
 
 
-#### Human Play data
+### Human Play data
 
-We store the human play data in **mp4 format** with a frame rate of **20 FPS**. Afterwards, we apply some **post-processing** to convert it into the required **robomimic format**.
+We collected a dataset of human play data by zed camera in two views. Here, human play data refers to videos that capture human hand–environment interactions during manipulation tasks. In our experiments, the demonstrations primarily consist of pick-and-place activities, such as picking up a plastic chili model from one bowl and placing it into another.
 
-1. **Hand detection**  
-   We use a pretrained hand detection model[![GitHub Repo](https://img.shields.io/badge/GitHub-handobj-blue?logo=github)](https://github.com/ddshan/hand_object_detector) to locate human hands in the video frames. In total, we collected **10 demonstrations**. After filtering, we discarded several demos where the hands could not be reliably detected.
+The raw demonstrations are stored in MP4 format with a frame rate of 20 FPS. Afterwards, we apply a series of post-processing steps to transform these recordings into the standardized robomimic format
 
-2. **3D triangulation and dataset conversion**  
-   Using the **calibrated stereo camera setup** (two synchronized viewpoints), we triangulate the detected hand positions to obtain their **3D coordinates in the world frame**. These 3D hand trajectories are then converted into the **robomimic dataset format**.
+- **Hand detection**  
+   We use a pretrained hand detection model<d-cite key="Shan20"></d-cite>[![GitHub Repo](https://img.shields.io/badge/GitHub-handobj-blue?logo=github)](https://github.com/ddshan/hand_object_detector) to locate human hands in the video frames. We process the videos frame by frame, detecting the position of the hands in each frame and recording it.
 
-Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system. Below is the detection code used for this visualization check:
+- **3D triangulation**  
+   We triangulate the detected hand positions to obtain their **3D coordinates in the world frame** by using the **calibrated stereo camera setup** (two synchronized viewpoints).
+
+- **Dataset conversion**
+   After extracting the image observations and the corresponding 3D hand positions, we store the processed data in the robomimic format. In addition, for each frame, we compute the trajectories of the subsequent 10 time steps based on temporal differences, and these predicted short-horizon trajectories are also saved in the same robomimic format.
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0 text-center">
+    {% include video.liquid path="assets/video/high_level/data_show.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
+  </div>
+</div>
+<div class="caption text-center">
+  Each frame with its corresponding future ten-step ground-truth trajectory. Green dots indicate the ground-truth trajectories over the subsequent 10 time steps.
+</div>
+
+Through the above processing pipeline, we obtain our dataset with follow stucture:
+```
+Group: data/demo_0
+  - attributes:
+    - num_samples: 26
+Dataset: data/demo_0/actions, shape=(27, 30), dtype=float64
+Dataset: data/demo_0/dones, shape=(26,), dtype=float64
+Dataset: data/demo_0/interventions, shape=(27, 1), dtype=float64
+Group: data/demo_0/obs
+Dataset: data/demo_0/obs/agentview_image, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/agentview_image_2, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/front_image_1, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/front_image_2, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/hand_act_1, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/hand_act_2, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/hand_loc, shape=(27, 1, 3), dtype=float64
+Dataset: data/demo_0/obs/hand_loc_1, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/hand_loc_2, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/robot0_eef_pos, shape=(27, 1, 3), dtype=float64
+Dataset: data/demo_0/obs/robot0_eef_pos_future_traj, shape=(27, 30), dtype=float64
+Dataset: data/demo_0/policy_acting, shape=(27,), dtype=float64
+Dataset: data/demo_0/rewards, shape=(26,), dtype=float64
+Dataset: data/demo_0/states, shape=(0,), dtype=float64
+Dataset: data/demo_0/user_acting, shape=(27, 1), dtype=float64
+```
+
+Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system.
+
+During validation, we observed that in certain frames the back-projection failed to recover valid hand positions. Such frames were labeled as invalid frames. To assess data quality, we compared the ratio of invalid frames to the total number of frames for each demonstration. Based on this criterion, 3 out of the 10 collected demonstrations exhibited excessive invalid frames and were discarded. The remaining 7 demonstrations were retained.
+
+Below is the detection code used for this visualization check:
 
 ```python
 out_dir = "buffer/Slow_version_Human_prompts_0"
@@ -450,21 +494,42 @@ FILE_CONTENTS {
 
 ## High Level Latent Planner
 
+### Dataset
+
+For the training of the high-level latent planner, we utilize the 7 valid demonstrations obtained after post-processing and filtering. These demonstrations are randomly split into a training set and a validation set: 6 demonstrations are assigned to the training set, while the remaining 1 demonstration is reserved for validation.
+
+To train the GMM-based high-level planner, we design the input-output structure of the training data as follow figure. The inputs consist of two RGB images and the current 3D hand position. Among the two images, the current image represents the present frame, while the goal image corresponds to a frame sampled from a future time step within the same demonstration. The label for each training sample is defined as the ground-truth trajectory over the subsequent 10 time steps starting from the current frame.
+
+
+
 ### Training
 
 #### Setup
 
-For the collected demonstration dataset, we used **one demo as the validation set**, while the remaining demos were used for **training**. The training was conducted following the **configuration provided in the reference paper**.
-For hyperparameters, we mainly relied on the **default settings from the official repository**, while performing **additional tuning** based on our own dataset to improve performance, e.g. "goal image range" and "std".
+The training was conducted following the **configuration provided in the reference paper**<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>.
+For hyperparameters, we mainly relied on the **default settings from the official repository**[![GitHub Repo](https://img.shields.io/badge/GitHub-mimicplay-blue?logo=github)](https://github.com/j96w/MimicPlay/blob/main/mimicplay/configs/highlevel_human.json), while performing **additional tuning** based on our own dataset to improve performance, In particular, we focused on two key hyperparameters:
+
+**goal_image_range**: defines the temporal distance between the current image and the goal image. A larger range allows the planner to consider goals further into the future, whereas a smaller range constrains the model to short-horizon predictions.
+
+**std** in GMM: corresponds to the standard deviation parameter in the Gaussian Mixture Model (GMM), which controls the smoothness and variability of the learned trajectory distribution. Adjusting this value influences how tightly the model clusters motion patterns and how much uncertainty it tolerates in trajectory generation..
+
+#### Loss Function
+
+The loss function is defined as the negative log-likelihood of the ground-truth trajectory under the distribution modeled by the Gaussian Mixture Model (GMM). Concretely, given the predicted GMM parameters at each time step, the true future trajectory is evaluated against the probability density of the mixture, and the optimization objective minimizes the negative of this log-probability.
 
 #### Evaluation
+
 We evaluated the high-level planner using two metrics:
 
 1. **GMM likelihood probability (training phase)**  
    During training, we monitored the **likelihood of the ground-truth data under the learned GMM model**. This serves as a measure of how well the model captures the distribution of the demonstrations.
 
-2. **Distance error (test phase)**  
-   On the test prompts, we computed the **distance error** between the predicted trajectories and the ground-truth hand positions. Since our high-level planner is a **probabilistic model**, we performed **multiple samples for each time step** in the sequence. The final error metric was obtained by averaging across the entire video sequence and across all samples.
+2. **Mean Squared Error(MSE)**  
+   In the subsequent testing phase, we evaluate the high-level planner by computing the distance error between the predicted trajectories and the ground-truth hand positions. Specifically, for each frame in the video, the GMM model generates 10 sampled predictions, and we take their average as the final trajectory estimate. The overall MSE is then calculated across the entire sequence to assess the effectiveness of the high-level planner.
+
+<!-- #### Results
+
+After completing the above experimental setup, we trained the high-level planner on the processed dataset. The figure below presents the training loss curve, which illustrates how the optimization objective decreases over time, indicating stable convergence of the model. -->
 
 
 
@@ -547,29 +612,82 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 
 ### High Level Planner
 
-After completing the training of the high-level latent planner, we first collected **video prompts** and performed a **visual inspection of the predicted trajectories**. This step allowed us to qualitatively evaluate whether the generated trajectories aligned with the expected task goals and to compare them against the ground-truth trajectories from the demonstrations. Below we show example visualizations of the predicted trajectories。
+Based on the implementation details described earlier, we trained the high-level planner using the processed human play dataset. After configuring the model and hyperparameters as specified in the Implementation section, we obtained both the training results and the test results, which are reported below.
+
+#### Training Results
+
+The training loss curves demonstrate that we can get a good model by training.
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/single_view_loss.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    Training loss of High level planner
+</div>
+
+#### Test Results
+
+We evaluated the trained high-level planner on a set of newly collected prompts. For each prompt, we computed the Mean Squared Error (MSE) between the predicted trajectories and the ground-truth hand trajectories. In addition, we visualized the predicted trajectories for each frame alongside the corresponding ground-truth trajectories, providing an intuitive comparison of the model's performance. The predicted trajectories are mean trajectories of sampled 10 times from GMM.
+
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+      <!-- <h5>Human Prompts</h5> -->
+      <p>Prompt 0</p>
+        {% include video.liquid path="assets/video/high_level/single_view/single_views_demo_3_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+       <!-- <h5>Robot Policy Acting</h5> -->
+       <p>Prompt 1</p>
+        {% include video.liquid path="assets/video/high_level/single_view/single_views_demo_4_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+</div>
+<div class="caption text-center">
+  The visualization of high level planner with single view images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner
+</div>
+
+#### Improvements
+
+The results presented above indicate that the initial performance of the high-level planner was not fully satisfactory. To address this, we conducted further experiments using **two-view video data** as input, allowing the model to benefit from richer visual observations.
+
+In addition, after training the low-level policy, we realized that the choice of hyperparameters should be considered in relation to the overall system rather than in isolation. Specifically, for the high-level planner, we argue that the **hand motion speed** in human demonstrations should be better aligned with the robot motion speed in the low-level policy to ensure consistency across layers.
+
+Given that our task trajectories are relatively simple, we also reduced the **number of GMM modes** to avoid overly complex distribution estimation. Under these revised settings, we re-collected a new set of human play data and corresponding prompts for testing. The new training results are reported below.
 
 <div class="row mt-4">
     <div class="col-sm text-center">
         <!-- <strong>After Sampling</strong> -->
-        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/start_with_traj.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>current states of hand with 10 steps future trajectory</p>
+        {% include figure.liquid loading="eager" path="assets/img/high_level/two_views_traj/bi_views_loss.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Training loss with new configuration</p>
     </div>
+</div>
+
+  <div class="row mt-4">
     <div class="col-sm text-center">
         <!-- <strong>After Sampling</strong> -->
-        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/goal.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>goal states of hand</p>
+        {% include figure.liquid loading="eager" path="assets/img/high_level/box_plot.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Compare between previews model and new model</p>
     </div>
 </div>
 
 <div class="row mt-3">
-  <div class="col-sm mt-3 mt-md-0 text-center">
-    {% include video.liquid path="assets/video/high_level/single_view/traj_video.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
-  </div>
+    <div class="col-sm mt-3 mt-md-0">
+      <!-- <h5>Human Prompts</h5> -->
+      <p>Prompt 2</p>
+        {% include video.liquid path="assets/video/high_level/two_views/bi_views_demo_0_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+       <!-- <h5>Robot Policy Acting</h5> -->
+       <p>Prompt 3</p>
+        {% include video.liquid path="assets/video/high_level/two_views/bi_views_demo_1_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
 </div>
 <div class="caption text-center">
-  trajectory through time steps
+  The visualization of high level planner with two views images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner
 </div>
+
 
 
 ### Low-Level Policy — Policy Controller (Live System)
@@ -628,7 +746,7 @@ Here is our evaluation video results:
 2. **Absence of Wrist Camera**
 
    * There was a significant **distribution shift** between training and evaluation image inputs from the front and back cameras.
-   * The original authors used a **wrist-mounted camera** to help stabilize the robot policy. However, we could not include one in our setup due to shared robot setup with another group.
+   * The original authors used a **wrist-mounted camera** to help stabilize the robot policy. However, we could not include one in our setup due to **shared robot setup with another group**.
    * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
 
 3. **Human playdata collection** We observed that keeping our hands consistently within the camera frame is crucial; otherwise, the training data becomes corrupted with noisy trajectories.
