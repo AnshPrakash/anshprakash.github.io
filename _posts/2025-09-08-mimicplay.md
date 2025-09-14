@@ -30,27 +30,24 @@ bibliography: 2025-09-08-mimicplay.bib
 #     jekyll-toc plugin (https://github.com/toshimaru/jekyll-toc).
 toc:
   - name: Introduction
-    subsections:
-      - name: Behavioural Cloning
   - name: Related Works
   - name: MimicPlay
+  - name: Implementation
     subsections:
-      - name: High Level Latent Planner
-      - name: Low Level Robot Policy
-  - name: Franka Teleoperation system
-  - name: Data Collection Pipeline
-    subsections:
-      - name: Human Play data
-        subsections:
-          - name: Hand Tracking
-            subsections:
-              - name: ABC
-              - name: XYZ
-          - name: Miscellaneous
-      - name: Low level Teleoperation Data
-        subsection:
-          - name: Sampler
-          - name: robomimimc style data format
+    - name: Franka Teleoperation system
+    - name: Data Collection Pipeline
+      subsections:
+        - name: Human Play data
+          subsections:
+            - name: Hand Tracking
+              subsections:
+                - name: ABC
+                - name: XYZ
+            - name: Miscellaneous
+        - name: Low level Teleoperation Data
+          subsection:
+            - name: Sampler
+            - name: robomimimc style data format
   - name: High Level Latent Planner
     subsections:
       - name: Model
@@ -177,9 +174,7 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
     Figure 2: Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
 </div>
 
-### Learning 3D-aware latent plans from human play data
-
-For long-horizon tasks defined by goal images, the problem is framed as hierarchical policy learning, where a goal-conditioned planner extracts features from the goal observation and converts them into low-dimensional latent plans to guide a low-level controller. To handle the multimodality of goal distributions without requiring massive datasets, this approach leverages inexpensive and easy-to-collect human play data.
+**Learning 3D-aware latent plans from human play data** For long-horizon tasks defined by goal images, the problem is framed as hierarchical policy learning, where a goal-conditioned planner extracts features from the goal observation and converts them into low-dimensional latent plans to guide a low-level controller. To handle the multimodality of goal distributions without requiring massive datasets, this approach leverages inexpensive and easy-to-collect human play data.
 
 **Learning multimodal latent plans** With human play data and the associated 3D hand trajectory $\tau$, the task is framed as goal-conditioned 3D trajectory generation. An observation encoder $E$ extracts features from the observation $o^h_t$ and goal image $g^h_t$, which are mapped by an MLP-based encoder into a latent plan vector $p_t$. Conditioned on $p_t$ and the hand location $l_t$, an MLP-based decoder predicts the 3D trajectory. To handle the multimodal nature of human motions, the trajectory distribution is modeled using a Gaussian Mixture Model (GMM) <d-cite key="bishop1994mdn"></d-cite>.
 
@@ -225,29 +220,7 @@ Instructing a robot to perform long-horizon visuomotor tasks is challenging due 
 
 **Transformer-based plan-guided imitation.** Decoupling planning from control enables the policy to focus on precise action execution. High-level plans are combined with wrist camera and proprioceptive features to form token embeddings, which a transformer <d-cite key="vaswani2017attention"></d-cite> processes for long-horizon predictions. Actions are generated through a GMM-based decoder to handle multimodal robot behaviors.
 
-### Model
-With the collected human play data and the corresponding 3D hand trajectories $$ ( \tau ) $$, we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
-
-To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
-
-- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
-- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
-- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
-
-In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
-
-### Latent plan
-Our high-level planner is formulated as a **latent plan generator**.  
-We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
-These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
-This hierarchical setup defines the high-level component as a latent plan rather than direct control.
-
-
-### Multi-modality
-The training model takes **multi-modal inputs** to construct the high-level planner.  
-Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
-This setup allows the model to learn from both visual context and motion data when generating latent plans.
-
+---
 
 # Implementation
 
