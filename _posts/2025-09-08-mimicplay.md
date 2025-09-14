@@ -39,35 +39,16 @@ toc:
   - name: MimicPlay
   - name: Implementation
     subsections:
+    - name: Comparison Between Original and Our Setup
     - name: Franka Teleoperation system
     - name: Data Collection Pipeline
       subsections:
         - name: Human Play data
-          subsections:
-            - name: Hand Tracking
-              subsections:
-                - name: ABC
-                - name: XYZ
-            - name: Miscellaneous
         - name: Low level Teleoperation Data
-          subsection:
-            - name: Sampler
-            - name: robomimimc style data format
-  - name: High Level Latent Planner
+  - name: Training
     subsections:
-      - name: Model
-      - name: Latent space
-      - name: Multi-modality
-      - name: Training
-  - name: Low Level Policy
-    subsections:
-      - name: Model
-      - name: Observation Space(Inputs)
-      - name: Action Space(Outputs)
-  - name: Differences in the original Setup and our Setup
-    subsecctions:
-      - name: Cameras
-      - name: Environment
+      - name: High Level Latent Planner
+      - name: Low Level Policy
   - name: Experiments
     subsections:
       - name: High Level Planner
