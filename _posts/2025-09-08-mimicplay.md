@@ -553,7 +553,7 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 </div>
 
 <div class="caption mt-2 text-center">
-    The low-level policy receives a latent plan, image observations, and proprioceptive inputs, then samples an action from a multimodal Gaussian distribution. <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+    The latent planner takes the current observation and a goal image (from the human prompt) to generate a latent trajectory plan. The low-level policy then combines this latent plan with image observations and proprioceptive inputs to sample actions from a GMM, whose parameters are determined by a GPT model followed by an MLP layer <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>.
 </div>
 
 
