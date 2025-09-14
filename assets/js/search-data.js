@@ -23,9 +23,9 @@ ninja.data = [{
           handler: () => {
             window.location.href = "/repositories/";
           },
-        },{id: "post-mimicplay-on-franka-arm-and-its-extension2",
+        },{id: "post-mimicplay-on-franka-arm-and-its-extension",
         
-          title: "MimicPlay on Franka Arm and its Extension2",
+          title: "MimicPlay on Franka Arm and its Extension",
         
         description: "This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.",
         section: "Posts",
