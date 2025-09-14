@@ -381,7 +381,6 @@ print(f"Saved projections and images in '{out_dir}/'")
 
 
 
-
 #### Low level Teleoperation Data
 
 We record rosbag from various topics. Here is the list of topics we record. However, this will need further post-processing because all the topics are published at different frequncies.
@@ -400,37 +399,6 @@ topics:
 
 We first estimated the frequencies of all the topics and then used our sampling algorithm to resample at a fixed frequency, corresponding to the rate at which we want our policy controller to operate.
 
-<!-- Pre-processed frequencies -->
-<div class="row mt-3">
-    <div class="col-sm text-center">
-        <strong>Before Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/cartesian_impedance_controller/desired_pose @ 50Hz</p>
-    </div>
-    <div class="col-sm text-center">
-        <strong>Before Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/franka_state_controller/O_T_EE @ 607Hz</p>
-    </div>
-</div>
-
-<!-- Post-processed frequencies -->
-<div class="row mt-4">
-    <div class="col-sm text-center">
-        <strong>After Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/cartesian_impedance_controller/desired_pose @ 13Hz</p>
-    </div>
-    <div class="col-sm text-center">
-        <strong>After Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/franka_state_controller/O_T_EE @ 13Hz</p>
-    </div>
-</div>
-
-<div class="caption mt-2 text-center">
-    Frequencies of both topics are aligned after applying our sampling algorithm, from highly different original rates (50Hz vs 607Hz) to a unified 13Hz (hyperparameter).
-</div>
 
 
 **Here is the pseudo code for our sampling algorithm which ensures equal observations from all topics:**
@@ -622,7 +590,7 @@ After completing the training of the high-level latent planner, we first collect
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/robot-policy/scripts/policy_controller.py)
 
-Below we present our evaluation results for the low-level policy. Although the success rate was 0%, we have developed a solid understanding of the underlying reasons for this outcome.
+**Multi-Stage Success Evaluation.** We evaluated the low-level policy using a three-stage success metric: (1) grasping the target object, (2) reaching the designated drop location, and (3) placing the object correctly. The policy achieved a 0% success rate at the first stage, which consequently led to failure in the subsequent stages. Nonetheless, we have clear insights into understanding of the underlying causes.
 
 Here is our evaluation video results:
 
