@@ -222,9 +222,36 @@ Instructing a robot to perform long-horizon visuomotor tasks is challenging due 
 
 ---
 
-# Implementation
+## Implementation
 
-## Franka Teleoperation system
+
+
+### Comparison Between Original and Our Setup
+
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/our_setup.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Lab setup: two external cameras (front and back) are used, but no wrist-mounted camera is available
+</div>
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/mimicplay_setup.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Original Robot setup from Mimicplay authors
+</div>
+
+
+
+
+
+### Franka Teleoperation system
 
 We developed our own teleoperation system to collect low-level demonstration data. Using a Meta Quest VR controller, we operated the Panda arm, with the headset tracking the controller’s pose in real time. The pose differences from the controller were transformed into corresponding end-effector movements on the robot, enabling us to perform various pick-and-place tasks.
 
@@ -247,10 +274,10 @@ Here is the code for teleoperation: [![GitHub Repo](https://img.shields.io/badge
 
 ---
 
-## Data Collection Pipeline
+### Data Collection Pipeline
 
 
-### Human Play data
+#### Human Play data
 
 We store the human play data in **mp4 format** with a frame rate of **20 FPS**. Afterwards, we apply some **post-processing** to convert it into the required **robomimic format**.
 
@@ -354,7 +381,8 @@ print(f"Saved projections and images in '{out_dir}/'")
 
 
 
-### Low level Teleoperation Data
+
+#### Low level Teleoperation Data
 
 We record rosbag from various topics. Here is the list of topics we record. However, this will need further post-processing because all the topics are published at different frequncies.
 
@@ -559,10 +587,6 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 <div class="caption mt-2 text-center">
     The low-level policy receives a latent plan, image observations, and proprioceptive inputs, then samples an action from a multimodal Gaussian distribution. <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
 </div>
-
-
-# Differences in the original Setup and our Setup
-
 
 
 ## Experiments
