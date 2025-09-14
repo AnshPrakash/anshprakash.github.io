@@ -627,7 +627,7 @@ Here is our evaluation video results:
 
 
 <div class="caption">
-    Left: Human prompts, Right: Robot policy acting
+    Robot policy consistently follows the same path regardless of the human prompt, indicating overtraining. While earlier-epoch models showed more variation, their movements were too erratic to safely evaluate on the real robot.
 </div>
 
 
@@ -635,17 +635,20 @@ Here is our evaluation video results:
 
 1. **High-Level Planner — Poor Embedding Quality**
 
-   * We found that the high-level planner produced **high prediction errors** for trajectories, which resulted in **poor latent embeddings**.
-   * Through hyperparameter tuning, we discovered that our dataset required **fewer modes** for accurate trajectory prediction.
-   * Due to these weak embeddings, the low-level policy experienced **high variance between similar trajectories**, preventing it from fully leveraging the advantages of human guidance.
+   * We found that the high-level planner produced **high prediction errors** for trajectories, which possibly resulted in **poor latent embeddings**.
+   * Through hyperparameter tuning, we discovered that our dataset required **fewer modes**(num_mode = 2 worked the best for two views high level latent planner)  for accurate trajectory prediction.
+   * Due to these weak embeddings, the low-level policy suffered from **poor representations** (see MSE error of the single-view high-level planner), which prevented it from fully leveraging the benefits of human guidance.
 
 2. **Absence of Wrist Camera**
 
    * There was a significant **distribution shift** between training and evaluation image inputs from the front and back cameras.
-   * The original authors used a **wrist-mounted camera**, which helped stabilize the robot policy.
+   * The original authors used a **wrist-mounted camera** to help stabilize the robot policy. However, we could not include one in our setup due to shared robot setup with another group.
    * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
 
 3. **Human playdata collection** We observed that keeping our hands consistently within the camera frame is crucial; otherwise, the training data becomes corrupted with noisy trajectories.
+
+
+**Additionally, Lab Constraints**: The robot became unavailable at a certain point, which limited our ability to re-evaluate the low-level policy with the improved high-level planner and prevented a fully iterative process.
 
 
 ---
