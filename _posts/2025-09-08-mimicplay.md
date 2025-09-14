@@ -503,12 +503,6 @@ For the training of the high-level latent planner, we utilize the 7 valid demons
 
 To train the GMM-based high-level planner, we design the input-output structure of the training data as follow git. The inputs consist of two RGB images and the current 3D hand position. Among the two images, the current image represents the present frame, while the goal image corresponds to a frame sampled from a future time step within the same demonstration. The label for each training sample is defined as the ground-truth trajectory over the subsequent 10 time steps starting from the current frame.
 
-<div class="row mt-3">
-    <div class="col-sm text-center">
-        {% include figure.liquid loading="eager" path="assets/img/high_level/data.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>Loss curve for training low-level policy</p>
-    </div>
-</div>
 
 **Training**
 
@@ -773,16 +767,37 @@ To address this issue, one potential approach we are exploring is **temporal int
 
 We can use a Kalman filter to estimate the position of the occluded part by modeling the trajectory of the hand with a simple linear dynamics model.
 
+### High-level planner - Bimanual(or more)
 
-### High-level planner & Low-level planner - Bimanual
+We can extend the current single latent planner to a multi-planner framework, where multiple latent planners are jointly trained to estimate trajectories using a GMM, similar to the single-planner setup. However, this approach introduces challenges, as the number of GMM modes must increase to capture the added complexity. To improve stability, we could replace the GMM with a diffusion model, which naturally handles multimodal data and can generate diverse solutions for a given start and goal configuration.
 
-Only minor changes to the model are required to enable it for a bimanual scenario. Specifically, the action dimension needs to be doubled to account for the additional arm, and more observations must be added to track the positions of both end-effectors. The more challenging aspect lies in fine-tuning hyperparameters—such as the number of modes in the GMM decoder of the high-level planner—since data multimodality increases with two arms.
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/extention_high_level.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+Two high-level latent planners generate latent plan, which are concatenated and passed to a GMM model to predict the final trajectory for bimanual.
+</div>
+
+### Low-level planner - Bimanual
+
+For the low-level planner, only minor modifications are needed to adapt it to a bimanual scenario. Specifically, we must double the action dimension to account for the second arm and include additional observations to track both end-effectors. The more challenging aspect lies in tuning the GMM hyperparameters. To address this, we could instead employ a diffusion policy, which offers more stable training for multimodal action distributions.
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/extention_low_level.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+The low-level policy receives the concatenated latent plan and robot proprioceptive information, and predicts actions. The model is trained in the same way as the single-arm policy.
+</div>
 
 ---
 
 # Conclusion
 
-MimicPlay demonstrates how to leverage inexpensive human play data alongside limited robot demonstrations, opening the door to scalable imitation learning from internet-scale datasets. The framework exploits the complementary strengths of both sources: human play data trains the high-level controller to produce goal-conditioned latent plans by predicting future 3D hand trajectories, while robot demonstrations guide the low-level controller in translating these plans into executable actions. Building on this idea, we replicated MimicPlay on the Franka Emika Panda arm and developed a full pipeline for collecting and processing both human play data and teleoperated demonstrations. While our high-level planner trained successfully, we were unable to properly train the low-level policy due to early hyperparameter tuning errors. Finally, we outlined directions for extending MimicPlay to dual-arm systems, paving the way for tackling more complex manipulation tasks.
+MimicPlay demonstrates how to leverage inexpensive human play data alongside limited robot demonstrations, opening the door to scalable imitation learning from internet-scale datasets. The framework exploits the complementary strengths of both sources: human play data trains the high-level controller to produce goal-conditioned latent plans by predicting future 3D hand trajectories, while robot demonstrations guide the low-level controller in translating these plans into executable actions. Building on this idea, we replicated MimicPlay on the Franka Emika Panda arm and developed a full pipeline for collecting and processing both human play data and teleoperated demonstrations. While our high-level planner trained successfully, we were unable to properly train the low-level policy due to early hyperparameter tuning errors. Finally, we outlined directions for extending MimicPlay to dual-arm systems, paving the way for tackling more complex manipulation tasks by having multiple latent planner for each arm.
 
 ---
 
