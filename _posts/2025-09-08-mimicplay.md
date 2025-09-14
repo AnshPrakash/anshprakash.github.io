@@ -168,12 +168,48 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
 
 ## MimicPlay
 
+<div class="row mt-3">
+    <div class="col-sm text-left">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/overview.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+
+<div class="caption mt-2 text-center">
+    Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
+
 ### High Level Latent Planner
+
+
+### Learning 3D-aware latent plans from human play data
+
+For long-horizon tasks defined by goal images, the problem is framed as hierarchical policy learning, where a goal-conditioned planner extracts features from the goal observation and converts them into low-dimensional latent plans to guide a low-level controller. To handle the multimodality of goal distributions without requiring massive datasets, this approach leverages inexpensive and easy-to-collect human play data.
+
+**Learning multimodal latent plans** With human play data and the associated 3D hand trajectory $\tau$, the task is framed as goal-conditioned 3D trajectory generation. An observation encoder $E$ extracts features from the observation $o^h_t$ and goal image $g^h_t$, which are mapped by an MLP-based encoder into a latent plan vector $p_t$. Conditioned on $p_t$ and the hand location $l_t$, an MLP-based decoder predicts the 3D trajectory. To handle the multimodal nature of human motions, the trajectory distribution is modeled using a Gaussian Mixture Model (GMM) <d-cite key="bishop1994mdn"></d-cite>.
+
+$$
+p(\tau \mid \theta) = \sum_{z} p(\tau \mid \theta, z) \, p(z \mid \theta),
+$$
+
+The final learning objective of our GMM model is to minimize the `negative log-likelihood` of the detected 3D human hand trajectory $$ \tau $$ as
+
+
+$$
+\mathcal{L}_{\text{GMM}}(\theta) = - \mathbb{E}_{\tau} \left[ 
+\log \left( \sum_{k=1}^{K} \eta_k \, \mathcal{N}(\tau \mid \mu_k, \sigma_k) \right) 
+\right],
+\quad \text{where } 0 \leq \eta_k \leq 1, \; \sum_{k=1}^{K} \eta_k = 1.
+$$
+
+**Handling visual gap between human and robot domains.** The setup assumes humans and robots act in the same environment, but visual differences between domains hinder transferring the latent planner to robot control. To bridge this gap, the method minimizes the distance between human and robot feature embeddings (distribution's mean and variance) $$ Q^h = E(o^h) $$ and $$ Q^r = E(o^r) $$ using a KL divergence loss: $$  \mathcal{L}_{\text{KL}} = D_{\text{KL}}(Q^r \; || \; Q^h) $$
+
+
+Importantly, this does not require paired human–robot video data—$V^h$ and $V^r$ may involve different behaviors or tasks. Only image frames are needed to reduce the representation gap. The final loss for training the latent planner is defined as: $$ \mathcal{L} = \mathcal{L}_{\text{GMM}} + \lambda \cdot \mathcal{L}_{\text{KL}}, $$  where $$ \lambda $$ is a hyperparameter balancing the two losses.
 
 
 
 ### Model
-With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
+With the collected human play data and the corresponding 3D hand trajectories $$ ( \tau ) $$, we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
 
 To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
 
@@ -448,18 +484,6 @@ FILE_CONTENTS {
 ```
 
 ---
-
-<!-- Training process -->
-<div class="row mt-3">
-    <div class="col-sm text-left">
-        <strong>Method</strong>
-        {% include figure.liquid loading="eager" path="assets/img/mimicplay/training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-    </div>
-</div>
-
-<div class="caption mt-2 text-center">
-    Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
-</div>
 
 ## High Level Latent Planner
 
