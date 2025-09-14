@@ -417,14 +417,14 @@ We record rosbag from various topics. Here is the list of topics we record. Howe
 
 ```
 topics:
-  - /franka_state_controller/franka_states
-  - /franka_gripper/joint_states
-  - /franka_state_controller/joint_states_desired
-  - /franka_state_controller/O_T_EE
-  - /franka_state_controller/joint_states
-  - /cartesian_impedance_controller/desired_pose
-  - /zedA/zed_node_A/left/image_rect_color 
-  - /zedB/zed_node_B/left/image_rect_color 
+  - /franka_state_controller/franka_states           => Didn't use
+  - /franka_gripper/joint_states                     => Gripper Joint state
+  - /franka_state_controller/joint_states_desired    => Didn't use
+  - /franka_state_controller/O_T_EE                  => End-effector position
+  - /franka_state_controller/joint_states            => Joint states of the robot
+  - /cartesian_impedance_controller/desired_pose     => desired EE- position published by the teleop system
+  - /zedA/zed_node_A/left/image_rect_color           => Front camera
+  - /zedB/zed_node_B/left/image_rect_color           => Back camera
 ```
 
 We first estimated the frequencies of all the topics and then used our sampling algorithm to resample at a fixed frequency, corresponding to the rate at which we want our policy controller to operate.
