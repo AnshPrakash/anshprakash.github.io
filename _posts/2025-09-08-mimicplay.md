@@ -771,11 +771,27 @@ We can use a Kalman filter to estimate the position of the occluded part by mode
 
 We can extend the current single latent planner to a multi-planner framework, where multiple latent planners are jointly trained to estimate trajectories using a GMM, similar to the single-planner setup. However, this approach introduces challenges, as the number of GMM modes must increase to capture the added complexity. To improve stability, we could replace the GMM with a diffusion model, which naturally handles multimodal data and can generate diverse solutions for a given start and goal configuration.
 
-
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/extention_high_level.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+Two high-level latent planners generate latent plan, which are concatenated and passed to a GMM model to predict the final trajectory for bimanual.
+</div>
 
 ### Low-level planner - Bimanual
 
 For the low-level planner, only minor modifications are needed to adapt it to a bimanual scenario. Specifically, we must double the action dimension to account for the second arm and include additional observations to track both end-effectors. The more challenging aspect lies in tuning the GMM hyperparameters. To address this, we could instead employ a diffusion policy, which offers more stable training for multimodal action distributions.
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/extention_low_level.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+The low-level policy receives the concatenated latent plan and robot proprioceptive information, and predicts actions. The model is trained in the same way as the single-arm policy.
+</div>
 
 ---
 
