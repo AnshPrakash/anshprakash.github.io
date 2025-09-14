@@ -276,7 +276,7 @@ The raw demonstrations are stored in MP4 format with a frame rate of 20 FPS. Aft
    We triangulate the detected hand positions to obtain their **3D coordinates in the world frame** by using the **calibrated stereo camera setup** (two synchronized viewpoints).
 
 - **Dataset conversion**
-   After extracting the image observations and the corresponding 3D hand positions, we store the processed data in the robomimic format. In addition, for each frame, we compute the trajectories of the subsequent 10 time steps based on temporal differences, and these predicted short-horizon trajectories are also saved in the same robomimic format.
+   After extracting the image observations and the corresponding 3D hand positions, we store the processed data in the robomimic format. In addition, for each frame, we compute the trajectories of the subsequent 10 time steps based on temporal differences, and these ground-truth short-horizon trajectories are also saved in the same robomimic format.
 
 <div class="row mt-3">
   <div class="col-sm mt-3 mt-md-0 text-center">
@@ -315,7 +315,7 @@ Dataset: data/demo_0/user_acting, shape=(27, 1), dtype=float64
 
 Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system.
 
-During validation, we observed that in certain frames the back-projection failed to recover valid hand positions. Such frames were labeled as invalid frames. To assess data quality, we compared the ratio of invalid frames to the total number of frames for each demonstration. Based on this criterion, 3 out of the 10 collected demonstrations exhibited excessive invalid frames and were discarded. The remaining 7 demonstrations were retained.
+During validation, we observed that in some frames the back-projection failed to recover valid hand positions. Such frames were labeled as invalid frames. To assess data quality, we compared the ratio of invalid frames to the total number of frames for each demonstration. Based on this criterion, 3 out of the 10 collected demonstrations exhibited excessive invalid frames and were discarded. The remaining 7 demonstrations were retained.
 
 Below is the detection code used for this visualization check:
 
@@ -501,9 +501,14 @@ FILE_CONTENTS {
 
 For the training of the high-level latent planner, we utilize the 7 valid demonstrations obtained after post-processing and filtering. These demonstrations are randomly split into a training set and a validation set: 6 demonstrations are assigned to the training set, while the remaining 1 demonstration is reserved for validation.
 
-To train the GMM-based high-level planner, we design the input-output structure of the training data as follow figure. The inputs consist of two RGB images and the current 3D hand position. Among the two images, the current image represents the present frame, while the goal image corresponds to a frame sampled from a future time step within the same demonstration. The label for each training sample is defined as the ground-truth trajectory over the subsequent 10 time steps starting from the current frame.
+To train the GMM-based high-level planner, we design the input-output structure of the training data as follow git. The inputs consist of two RGB images and the current 3D hand position. Among the two images, the current image represents the present frame, while the goal image corresponds to a frame sampled from a future time step within the same demonstration. The label for each training sample is defined as the ground-truth trajectory over the subsequent 10 time steps starting from the current frame.
 
-
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/data.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Loss curve for training low-level policy</p>
+    </div>
+</div>
 
 **Training**
 
@@ -515,7 +520,7 @@ For hyperparameters, we mainly relied on the **default settings from the officia
 
 **goal_image_range**: defines the temporal distance between the current image and the goal image. A larger range allows the planner to consider goals further into the future, whereas a smaller range constrains the model to short-horizon predictions.
 
-**std** in GMM: corresponds to the standard deviation parameter in the Gaussian Mixture Model (GMM), which controls the smoothness and variability of the learned trajectory distribution. Adjusting this value influences how tightly the model clusters motion patterns and how much uncertainty it tolerates in trajectory generation..
+**std** in GMM: corresponds to the standard deviation parameter in the Gaussian Mixture Model (GMM), which controls the smoothness and variability of the learned trajectory distribution. Adjusting this value influences how tightly the model clusters motion patterns and how much uncertainty it tolerates in trajectory generation.
 
 #### Loss Function
 
@@ -531,10 +536,16 @@ We evaluated the high-level planner using two metrics:
 2. **Mean Squared Error(MSE)**  
    In the subsequent testing phase, we evaluate the high-level planner by computing the distance error between the predicted trajectories and the ground-truth hand positions. Specifically, for each frame in the video, the GMM model generates 10 sampled predictions, and we take their average as the final trajectory estimate. The overall MSE is then calculated across the entire sequence to assess the effectiveness of the high-level planner.
 
-<!-- #### Results
+#### Training Results
 
-After completing the above experimental setup, we trained the high-level planner on the processed dataset. The figure below presents the training loss curve, which illustrates how the optimization objective decreases over time, indicating stable convergence of the model. -->
+The training loss curves is shown as follow. From the training curves, it is evident that the model quickly falls into overfitting. Specifically, the training loss decreases rapidly in the early stages, while the validation loss starts to increase shortly thereafter. We attribute this behavior to the excessive number of modes in the Gaussian Mixture Model (GMM). An overly large number of mixture components endows the model with excessive representational capacity, enabling it to almost fully memorize the training data.
 
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/single_view_loss.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Loss curve for training high-level planner</p>
+    </div>
+</div>
 
 
 
@@ -616,21 +627,8 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 
 #### High Level Planner
 
-Based on the implementation details described earlier, we trained the high-level planner using the processed human play dataset. After configuring the model and hyperparameters as specified in the Implementation section, we obtained both the training results and the test results, which are reported below.
+Based on the implementation details described earlier, we trained the high-level planner using the processed human play dataset. After configuring the model and hyperparameters as specified in the Implementation section, we obtained the test results, which are reported below.
 
-#### Training Results
-
-The training loss curves demonstrate that we can get a good model by training.
-
-<div class="row mt-3">
-    <div class="col-sm text-center">
-        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/single_view_loss.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-    </div>
-</div>
-
-<div class="caption mt-2 text-center">
-    Training loss of High level planner
-</div>
 
 #### Test Results
 
@@ -649,7 +647,8 @@ We evaluated the trained high-level planner on a set of newly collected prompts.
     </div>
 </div>
 <div class="caption text-center">
-  The visualization of high level planner with single view images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner
+  The visualization of high level planner with single view images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner.
+  For the predicted trajectory, the color gradually fades with increasing time steps, indicating the temporal progression of the plan.
 </div>
 
 #### Improvements - Further hyperparameter tuning (Learning)
@@ -659,6 +658,8 @@ The results presented above indicate that the initial performance of the high-le
 In addition, after training the low-level policy, we realized that the choice of hyperparameters should be considered in relation to the overall system rather than in isolation. Specifically, for the high-level planner, we argue that the **hand motion speed** in human demonstrations should be better aligned with the robot motion speed in the low-level policy to ensure consistency across layers.
 
 Given that our task trajectories are relatively simple, we also reduced the **number of GMM modes** to avoid overly complex distribution estimation. Under these revised settings, we re-collected a new set of human play data and corresponding prompts for testing. The new training results are reported below.
+
+As shown in the figure, both the training loss curves and the mean squared error (MSE) exhibit substantial improvements compared to the previous training results. This demonstrates that the revised settings not only alleviate overfitting but also lead to more stable optimization and better overall model performance. Moreover, in the trajectory visualizations of the high-level planner, the results are also noticeably better than those obtained in the previous setting, indicating clearer and more consistent planning behavior.
 
 <div class="row mt-4">
     <div class="col-sm text-center">
@@ -672,7 +673,7 @@ Given that our task trajectories are relatively simple, we also reduced the **nu
     <div class="col-sm text-center">
         <!-- <strong>After Sampling</strong> -->
         {% include figure.liquid loading="eager" path="assets/img/high_level/box_plot.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>Compare between previews model and new model</p>
+        <p>Comparison between previews model and new model</p>
     </div>
 </div>
 
@@ -689,7 +690,8 @@ Given that our task trajectories are relatively simple, we also reduced the **nu
     </div>
 </div>
 <div class="caption text-center">
-  The visualization of high level planner with two views images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner
+  The visualization of high level planner with two views images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner.
+  For the predicted trajectory, the color gradually fades with increasing time steps, indicating the temporal progression of the plan.
 </div>
 
 
