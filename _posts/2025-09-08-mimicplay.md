@@ -169,17 +169,13 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
 ## MimicPlay
 
 <div class="row mt-3">
-    <div class="col-sm text-left">
+    <div class="col-sm text-left" id="fig:overview-mimicplay">
         {% include figure.liquid loading="eager" path="assets/img/mimicplay/overview.png" class="img-fluid rounded z-depth-1" zoomable=true %}
     </div>
 </div>
-
 <div class="caption mt-2 text-center">
-    Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+    Figure 2: Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
 </div>
-
-### High Level Latent Planner
-
 
 ### Learning 3D-aware latent plans from human play data
 
@@ -201,12 +197,33 @@ $$
 \quad \text{where } 0 \leq \eta_k \leq 1, \; \sum_{k=1}^{K} \eta_k = 1.
 $$
 
-**Handling visual gap between human and robot domains.** The setup assumes humans and robots act in the same environment, but visual differences between domains hinder transferring the latent planner to robot control. To bridge this gap, the method minimizes the distance between human and robot feature embeddings (distribution's mean and variance) $$ Q^h = E(o^h) $$ and $$ Q^r = E(o^r) $$ using a KL divergence loss: $$  \mathcal{L}_{\text{KL}} = D_{\text{KL}}(Q^r \; || \; Q^h) $$
+**Handling visual gap between human and robot domains.** The setup assumes humans and robots act in the same environment, but visual differences between domains hinder transferring the latent planner to robot control. To bridge this gap, the method minimizes the distance between human and robot feature embeddings (distribution's mean and variance) $$ Q^h = E(o^h) $$ and $$ Q^r = E(o^r) $$ using a KL divergence loss: {% raw %}
+$$
+\mathcal{L}_{\text{KL}} = D_{\text{KL}}(Q^r \; || \; Q^h)
+$$
+{% endraw %}
+
 
 
 Importantly, this does not require paired human–robot video data—$V^h$ and $V^r$ may involve different behaviors or tasks. Only image frames are needed to reduce the representation gap. The final loss for training the latent planner is defined as: $$ \mathcal{L} = \mathcal{L}_{\text{GMM}} + \lambda \cdot \mathcal{L}_{\text{KL}}, $$  where $$ \lambda $$ is a hyperparameter balancing the two losses.
 
+**Plan-guided multi-task imitation learning**  MIMICPLAY addresses multi-task imitation learning, where a single policy is trained to execute multiple goal-conditioned tasks. Unlike prior end-to-end approaches <d-cite key="cui2022play"></d-cite>, <d-cite key="yu2018one"></d-cite>, <d-cite key="andrychowicz2017her"></d-cite> that require large amounts of teleoperation data (e.g., 4.5–6 hours <d-cite key="cui2022play"></d-cite>, <d-cite key="rosete2022latent"></d-cite>), MIMICPLAY leverages a latent planner $P$ pretrained on just 10 minutes of human play data to compress high-dimensional inputs into low-dimensional latent plans $p_t$. These latent plans provide rich 3D guidance, allowing the low-level policy $\pi$ to efficiently learn the mapping from plans $p_t$ to actions $a_t$.
 
+**Video prompting for latent plan generation.** 
+Instructing a robot to perform long-horizon visuomotor tasks is challenging due to complex goal specifications. The latent planner $$ P $$, trained on human play videos, can interpolate 3D-aware task-level plans directly from human motion, serving as an interface for guiding long-horizon manipulation. Specifically, a one-shot video $$ V $$ (either human $$ V^h $$ or robot $$ V^r $$) is used as a goal prompt for the pretrained planner to generate robot-executable latent plans $$ p_t $$. The video is first converted into a sequence of image frames, and at each time step, the high-level planner $$ P $$ takes the current frame $$ g_t $$ as a goal input to produce a latent plan $$ p_t $$, which guides the low-level action $$ a_t $$. After executing $$ a_t $$, the next frame in the sequence is used as the new goal image.
+
+
+<!--  laten planner -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/latent-planner.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Latent planner processing a human prompt: The planner operates in a sliding-window manner, taking the current observation image and the goal image provided by the human prompt. It encodes these into latent vectors for the start and goal, which are updated continuously as the end-effector progresses toward the target.
+</div>
+
+**Transformer-based plan-guided imitation.** Decoupling planning from control enables the policy to focus on precise action execution. High-level plans are combined with wrist camera and proprioceptive features to form token embeddings, which a transformer <d-cite key="vaswani2017attention"></d-cite> processes for long-horizon predictions. Actions are generated through a GMM-based decoder to handle multimodal robot behaviors.
 
 ### Model
 With the collected human play data and the corresponding 3D hand trajectories $$ ( \tau ) $$, we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
@@ -225,15 +242,6 @@ We use a pretrained **GMM model** to produce latent trajectory plans from the co
 These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
 This hierarchical setup defines the high-level component as a latent plan rather than direct control.
 
-<!-- Training low level planner -->
-<div class="row mt-3">
-    <div class="col-sm text-center">
-        {% include figure.liquid loading="eager" path="assets/img/high_level/latent-planner.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
-    </div>
-</div>
-<div class="caption mt-2 text-center">
-    **Latent planner processing a human prompt**: The planner operates in a sliding-window manner, taking the current observation image and the goal image provided by the human prompt. It encodes these into latent vectors for the start and goal, which are updated continuously as the end-effector progresses toward the target.
-</div>
 
 ### Multi-modality
 The training model takes **multi-modal inputs** to construct the high-level planner.  
@@ -672,6 +680,7 @@ Here is our evaluation video results:
    * The original authors used a **wrist-mounted camera**, which helped stabilize the robot policy.
    * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
 
+3. **Human playdata collection** We observed that keeping our hands consistently within the camera frame is crucial; otherwise, the training data becomes corrupted with noisy trajectories.
 
 
 ---
