@@ -45,14 +45,14 @@ toc:
       subsections:
         - name: Human Play data
         - name: Low level Teleoperation Data
-  - name: Training
+  - name: Learning
     subsections:
       - name: High Level Latent Planner
       - name: Low Level Policy
   - name: Experiments
     subsections:
-      - name: High Level Planner
-      - name: Low Level Planner
+      - name: High-Level Planner
+      - name: Low-Level Policy - Policy Controller (Live system)
   - name: Extension to Bimanual Tiago
     subsections:
       - name: Update to Hand Tracking system to two hands
@@ -411,7 +411,7 @@ print(f"Saved projections and images in '{out_dir}/'")
 
 
 
-#### Low level Teleoperation Data
+### Low level Teleoperation Data
 
 We record rosbag from various topics. Here is the list of topics we record. However, this will need further post-processing because all the topics are published at different frequncies.
 
@@ -492,9 +492,12 @@ FILE_CONTENTS {
 
 ---
 
-## High Level Latent Planner
+### Learning
 
-### Dataset
+### High Level Latent Planner
+
+
+**Dataset**
 
 For the training of the high-level latent planner, we utilize the 7 valid demonstrations obtained after post-processing and filtering. These demonstrations are randomly split into a training set and a validation set: 6 demonstrations are assigned to the training set, while the remaining 1 demonstration is reserved for validation.
 
@@ -502,9 +505,10 @@ To train the GMM-based high-level planner, we design the input-output structure 
 
 
 
-### Training
+**Training**
 
-#### Setup
+
+**Setup**
 
 The training was conducted following the **configuration provided in the reference paper**<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>.
 For hyperparameters, we mainly relied on the **default settings from the official repository**[![GitHub Repo](https://img.shields.io/badge/GitHub-mimicplay-blue?logo=github)](https://github.com/j96w/MimicPlay/blob/main/mimicplay/configs/highlevel_human.json), while performing **additional tuning** based on our own dataset to improve performance, In particular, we focused on two key hyperparameters:
@@ -535,7 +539,7 @@ After completing the above experimental setup, we trained the high-level planner
 
 
 
-## Low Level Policy
+### Low Level Policy
 
 
 During **training**, the low-level policy receives a latent embedding of the robot’s trajectory from the high-level latent planner. This embedding provides rich contextual information, significantly reducing the need for large amounts of teleoperation data.
@@ -608,9 +612,9 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 </div>
 
 
-## Experiments
+### Experiments
 
-### High Level Planner
+#### High Level Planner
 
 Based on the implementation details described earlier, we trained the high-level planner using the processed human play dataset. After configuring the model and hyperparameters as specified in the Implementation section, we obtained both the training results and the test results, which are reported below.
 
@@ -648,7 +652,7 @@ We evaluated the trained high-level planner on a set of newly collected prompts.
   The visualization of high level planner with single view images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner
 </div>
 
-#### Improvements
+#### Improvements - Further hyperparameter tuning (Learning)
 
 The results presented above indicate that the initial performance of the high-level planner was not fully satisfactory. To address this, we conducted further experiments using **two-view video data** as input, allowing the model to benefit from richer visual observations.
 
@@ -735,7 +739,7 @@ Here is our evaluation video results:
 </div>
 
 
-### Key Limitations Observed
+##### Key Limitations Observed
 
 1. **High-Level Planner — Poor Embedding Quality**
 
