@@ -3,7 +3,7 @@ layout: distill
 title: MimicPlay on Franka Arm and its Extension
 description: This blog is part of our university’s project lab, where we are working on replicating MimicPlay using a real one-arm robotic platform in our lab. Building on this setup, we aim to extend the approach to bi-manual systems such as the Tiago robot. Our work explores how abundant human play data can be leveraged to guide efficient low-level robot policies.
 tags: Imitation-Learning, Learning-from-Human, Long-Horizon-Manipulation, pearl-lab
-date: 2025-09-08
+date: 2025-09-14
 citation: true
 related_publications: true
 related_posts: false
@@ -19,6 +19,11 @@ authors:
     url: "https://github.com/Xiaoqi-Z7"
     affiliations:
       name: TU Darmstadt
+  - name: Franziska Herbert
+    url: https://pearl-lab.com/people/franziska-herbert/
+    affiliations:
+      name: TU Darmstadt
+  
 
 bibliography: 2025-09-08-mimicplay.bib
 
@@ -30,46 +35,24 @@ bibliography: 2025-09-08-mimicplay.bib
 #     jekyll-toc plugin (https://github.com/toshimaru/jekyll-toc).
 toc:
   - name: Introduction
-    subsections:
-      - name: Behavioural Cloning
   - name: Related Works
   - name: MimicPlay
+  - name: Implementation
+    subsections:
+    - name: Comparison Between Original and Our Setup
+    - name: Franka Teleoperation system
+    - name: Data Collection Pipeline
+      subsections:
+        - name: Human Play data
+        - name: Low level Teleoperation Data
+  - name: Learning
     subsections:
       - name: High Level Latent Planner
-      - name: Low Level Robot Policy
-  - name: Franka Teleoperation system
-  - name: Data Collection Pipeline
-    subsections:
-      - name: Human Play data
-        subsections:
-          - name: Hand Tracking
-            subsections:
-              - name: ABC
-              - name: XYZ
-          - name: Miscellaneous
-      - name: Low level Teleoperation Data
-        subsection:
-          - name: Sampler
-          - name: robomimimc style data format
-  - name: High Level Latent Planner
-    subsections:
-      - name: Model
-      - name: Latent space
-      - name: Multi-modality
-      - name: Training
-  - name: Low Level Policy
-    subsections:
-      - name: Model
-      - name: Observation Space(Inputs)
-      - name: Action Space(Outputs)
-  - name: Differences in the original Setup and our Setup
-    subsecctions:
-      - name: Cameras
-      - name: Environment
+      - name: Low Level Policy
   - name: Experiments
     subsections:
-      - name: High Level Planner
-      - name: Low Level Planner
+      - name: High-Level Planner
+      - name: Low-Level Policy - Policy Controller (Live system)
   - name: Extension to Bimanual Tiago
     subsections:
       - name: Update to Hand Tracking system to two hands
@@ -168,34 +151,93 @@ Subsequently, the robot learns low-level manipulation policies from a limited se
 
 ## MimicPlay
 
-### High Level Latent Planner
+<div class="row mt-3">
+    <div class="col-sm text-left" id="fig:overview-mimicplay">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/overview.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Figure 2: Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+</div>
 
-### Model
-With the collected human play data and the corresponding 3D hand trajectories \( \tau \), we formalize the latent plan learning problem as a **goal-conditioned 3D trajectory generation task**. In this formulation, the planner must generate feasible hand trajectories conditioned on the specified goal state.  
+**Learning 3D-aware latent plans from human play data** For long-horizon tasks defined by goal images, the problem is framed as hierarchical policy learning, where a goal-conditioned planner extracts features from the goal observation and converts them into low-dimensional latent plans to guide a low-level controller. To handle the multimodality of goal distributions without requiring massive datasets, this approach leverages inexpensive and easy-to-collect human play data.
 
-To model this distribution, we adopt a **Gaussian Mixture Model (GMM)** as the high-level planner. The GMM captures the multi-modal nature of human demonstrations, where multiple valid trajectories may exist for achieving the same goal. This provides several advantages:
+**Learning multimodal latent plans** With human play data and the associated 3D hand trajectory $\tau$, the task is framed as goal-conditioned 3D trajectory generation. An observation encoder $E$ extracts features from the observation $o^h_t$ and goal image $g^h_t$, which are mapped by an MLP-based encoder into a latent plan vector $p_t$. Conditioned on $p_t$ and the hand location $l_t$, an MLP-based decoder predicts the 3D trajectory. To handle the multimodal nature of human motions, the trajectory distribution is modeled using a Gaussian Mixture Model (GMM) <d-cite key="bishop1994mdn"></d-cite>.
 
-- **Goal-conditioning**: ensures that the generated trajectory is consistent with the task objective.  
-- **Flexibility**: supports multiple valid solutions instead of collapsing to a single mode.  
-- **Robustness across tasks**: enables the planner to generalize across diverse demonstrations collected from different tasks.  
+$$
+p(\tau \mid \theta) = \sum_{z} p(\tau \mid \theta, z) \, p(z \mid \theta),
+$$
 
-In summary, the GMM-based planner learns to represent the distribution of goal-conditioned trajectories, which allows for generating diverse yet feasible high-level plans.
-
-### Latent plan
-Our high-level planner is formulated as a **latent plan generator**.  
-We use a pretrained **GMM model** to produce latent trajectory plans from the collected demonstrations.  
-These latent plans are not directly executed by the robot but are instead passed to the **low-level controller**, which converts them into executable motor commands.  
-This hierarchical setup defines the high-level component as a latent plan rather than direct control.
-
-### Multi-modality
-The training model takes **multi-modal inputs** to construct the high-level planner.  
-Specifically, it receives **two-view RGB images** together with the corresponding **hand position information** as inputs, and outputs a **GMM trajectory distribution**.  
-This setup allows the model to learn from both visual context and motion data when generating latent plans.
+The final learning objective of our GMM model is to minimize the `negative log-likelihood` of the detected 3D human hand trajectory $$ \tau $$ as
 
 
-# Implementation
+$$
+\mathcal{L}_{\text{GMM}}(\theta) = - \mathbb{E}_{\tau} \left[ 
+\log \left( \sum_{k=1}^{K} \eta_k \, \mathcal{N}(\tau \mid \mu_k, \sigma_k) \right) 
+\right],
+\quad \text{where } 0 \leq \eta_k \leq 1, \; \sum_{k=1}^{K} \eta_k = 1.
+$$
 
-## Franka Teleoperation system
+**Handling visual gap between human and robot domains.** The setup assumes humans and robots act in the same environment, but visual differences between domains hinder transferring the latent planner to robot control. To bridge this gap, the method minimizes the distance between human and robot feature embeddings (distribution's mean and variance) $$ Q^h = E(o^h) $$ and $$ Q^r = E(o^r) $$ using a KL divergence loss: {% raw %}
+$$
+\mathcal{L}_{\text{KL}} = D_{\text{KL}}(Q^r \; || \; Q^h)
+$$
+{% endraw %}
+
+
+
+Importantly, this does not require paired human–robot video data—$V^h$ and $V^r$ may involve different behaviors or tasks. Only image frames are needed to reduce the representation gap. The final loss for training the latent planner is defined as: $$ \mathcal{L} = \mathcal{L}_{\text{GMM}} + \lambda \cdot \mathcal{L}_{\text{KL}}, $$  where $$ \lambda $$ is a hyperparameter balancing the two losses.
+
+**Plan-guided multi-task imitation learning**  MIMICPLAY addresses multi-task imitation learning, where a single policy is trained to execute multiple goal-conditioned tasks. Unlike prior end-to-end approaches <d-cite key="cui2022play"></d-cite>, <d-cite key="yu2018one"></d-cite>, <d-cite key="andrychowicz2017her"></d-cite> that require large amounts of teleoperation data (e.g., 4.5–6 hours <d-cite key="cui2022play"></d-cite>, <d-cite key="rosete2022latent"></d-cite>), MIMICPLAY leverages a latent planner $P$ pretrained on just 10 minutes of human play data to compress high-dimensional inputs into low-dimensional latent plans $p_t$. These latent plans provide rich 3D guidance, allowing the low-level policy $\pi$ to efficiently learn the mapping from plans $p_t$ to actions $a_t$.
+
+**Video prompting for latent plan generation.** 
+Instructing a robot to perform long-horizon visuomotor tasks is challenging due to complex goal specifications. The latent planner $$ P $$, trained on human play videos, can interpolate 3D-aware task-level plans directly from human motion, serving as an interface for guiding long-horizon manipulation. Specifically, a one-shot video $$ V $$ (either human $$ V^h $$ or robot $$ V^r $$) is used as a goal prompt for the pretrained planner to generate robot-executable latent plans $$ p_t $$. The video is first converted into a sequence of image frames, and at each time step, the high-level planner $$ P $$ takes the current frame $$ g_t $$ as a goal input to produce a latent plan $$ p_t $$, which guides the low-level action $$ a_t $$. After executing $$ a_t $$, the next frame in the sequence is used as the new goal image.
+
+
+<!--  laten planner -->
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/latent-planner.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Latent planner processing a human prompt: The planner operates in a sliding-window manner, taking the current observation image and the goal image provided by the human prompt. It encodes these into latent vectors for the start and goal, which are updated continuously as the end-effector progresses toward the target.
+</div>
+
+**Transformer-based plan-guided imitation.** Decoupling planning from control enables the policy to focus on precise action execution. High-level plans are combined with wrist camera and proprioceptive features to form token embeddings, which a transformer <d-cite key="vaswani2017attention"></d-cite> processes for long-horizon predictions. Actions are generated through a GMM-based decoder to handle multimodal robot behaviors.
+
+---
+
+## Implementation
+
+
+
+### Comparison Between Original and Our Setup
+
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/our_setup.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Lab setup: two external cameras (front and back) are used, but no wrist-mounted camera is available
+</div>
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/mimicplay/mimicplay_setup.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    </div>
+</div>
+<div class="caption mt-2 text-center">
+    Original Robot setup from Mimicplay authors
+</div>
+
+
+
+
+
+### Franka Teleoperation system
 
 We developed our own teleoperation system to collect low-level demonstration data. Using a Meta Quest VR controller, we operated the Panda arm, with the headset tracking the controller’s pose in real time. The pose differences from the controller were transformed into corresponding end-effector movements on the robot, enabling us to perform various pick-and-place tasks.
 
@@ -218,20 +260,64 @@ Here is the code for teleoperation: [![GitHub Repo](https://img.shields.io/badge
 
 ---
 
-## Data Collection Pipeline
+### Data Collection Pipeline
 
 
 ### Human Play data
 
-We store the human play data in **mp4 format** with a frame rate of **20 FPS**. Afterwards, we apply some **post-processing** to convert it into the required **robomimic format**.
+We collected a dataset of human play data by zed camera in two views. Here, human play data refers to videos that capture human hand–environment interactions during manipulation tasks. In our experiments, the demonstrations primarily consist of pick-and-place activities, such as picking up a plastic chili model from one bowl and placing it into another.
 
-1. **Hand detection**  
-   We use a pretrained hand detection model[![GitHub Repo](https://img.shields.io/badge/GitHub-handobj-blue?logo=github)](https://github.com/ddshan/hand_object_detector) to locate human hands in the video frames. In total, we collected **10 demonstrations**. After filtering, we discarded several demos where the hands could not be reliably detected.
+The raw demonstrations are stored in MP4 format with a frame rate of 20 FPS. Afterwards, we apply a series of post-processing steps to transform these recordings into the standardized robomimic format
 
-2. **3D triangulation and dataset conversion**  
-   Using the **calibrated stereo camera setup** (two synchronized viewpoints), we triangulate the detected hand positions to obtain their **3D coordinates in the world frame**. These 3D hand trajectories are then converted into the **robomimic dataset format**.
+- **Hand detection**  
+   We use a pretrained hand detection model<d-cite key="Shan20"></d-cite>[![GitHub Repo](https://img.shields.io/badge/GitHub-handobj-blue?logo=github)](https://github.com/ddshan/hand_object_detector) to locate human hands in the video frames. We process the videos frame by frame, detecting the position of the hands in each frame and recording it.
 
-Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system. Below is the detection code used for this visualization check:
+- **3D triangulation**  
+   We triangulate the detected hand positions to obtain their **3D coordinates in the world frame** by using the **calibrated stereo camera setup** (two synchronized viewpoints).
+
+- **Dataset conversion**
+   After extracting the image observations and the corresponding 3D hand positions, we store the processed data in the robomimic format. In addition, for each frame, we compute the trajectories of the subsequent 10 time steps based on temporal differences, and these ground-truth short-horizon trajectories are also saved in the same robomimic format.
+
+<div class="row mt-3">
+  <div class="col-sm mt-3 mt-md-0 text-center">
+    {% include video.liquid path="assets/video/high_level/data_show.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
+  </div>
+</div>
+<div class="caption text-center">
+  Each frame with its corresponding future ten-step ground-truth trajectory. Green dots indicate the ground-truth trajectories over the subsequent 10 time steps.
+</div>
+
+Through the above processing pipeline, we obtain our dataset with follow stucture:
+```
+Group: data/demo_0
+  - attributes:
+    - num_samples: 26
+Dataset: data/demo_0/actions, shape=(27, 30), dtype=float64
+Dataset: data/demo_0/dones, shape=(26,), dtype=float64
+Dataset: data/demo_0/interventions, shape=(27, 1), dtype=float64
+Group: data/demo_0/obs
+Dataset: data/demo_0/obs/agentview_image, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/agentview_image_2, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/front_image_1, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/front_image_2, shape=(27, 360, 640, 3), dtype=uint8
+Dataset: data/demo_0/obs/hand_act_1, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/hand_act_2, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/hand_loc, shape=(27, 1, 3), dtype=float64
+Dataset: data/demo_0/obs/hand_loc_1, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/hand_loc_2, shape=(27, 1, 12), dtype=float64
+Dataset: data/demo_0/obs/robot0_eef_pos, shape=(27, 1, 3), dtype=float64
+Dataset: data/demo_0/obs/robot0_eef_pos_future_traj, shape=(27, 30), dtype=float64
+Dataset: data/demo_0/policy_acting, shape=(27,), dtype=float64
+Dataset: data/demo_0/rewards, shape=(26,), dtype=float64
+Dataset: data/demo_0/states, shape=(0,), dtype=float64
+Dataset: data/demo_0/user_acting, shape=(27, 1), dtype=float64
+```
+
+Additionaly, we also do a **Projection validation (visualization check)** To verify the correctness of the calibration, we re-projected the obtained 3D points back to the image plane and visually inspected their alignment with the detected 2D hand positions. This ensured that the existed **camera parameters** were consistent with the real-world coordinate system.
+
+During validation, we observed that in some frames the back-projection failed to recover valid hand positions. Such frames were labeled as invalid frames. To assess data quality, we compared the ratio of invalid frames to the total number of frames for each demonstration. Based on this criterion, 3 out of the 10 collected demonstrations exhibited excessive invalid frames and were discarded. The remaining 7 demonstrations were retained.
+
+Below is the detection code used for this visualization check:
 
 ```python
 out_dir = "buffer/Slow_version_Human_prompts_0"
@@ -331,49 +417,18 @@ We record rosbag from various topics. Here is the list of topics we record. Howe
 
 ```
 topics:
-  - /franka_state_controller/franka_states
-  - /franka_gripper/joint_states
-  - /franka_state_controller/joint_states_desired
-  - /franka_state_controller/O_T_EE
-  - /franka_state_controller/joint_states
-  - /cartesian_impedance_controller/desired_pose
-  - /zedA/zed_node_A/left/image_rect_color 
-  - /zedB/zed_node_B/left/image_rect_color 
+  - /franka_state_controller/franka_states           => Didn't use
+  - /franka_gripper/joint_states                     => Gripper Joint state
+  - /franka_state_controller/joint_states_desired    => Didn't use
+  - /franka_state_controller/O_T_EE                  => End-effector position
+  - /franka_state_controller/joint_states            => Joint states of the robot
+  - /cartesian_impedance_controller/desired_pose     => desired EE- position published by the teleop system
+  - /zedA/zed_node_A/left/image_rect_color           => Front camera
+  - /zedB/zed_node_B/left/image_rect_color           => Back camera
 ```
 
 We first estimated the frequencies of all the topics and then used our sampling algorithm to resample at a fixed frequency, corresponding to the rate at which we want our policy controller to operate.
 
-<!-- Pre-processed frequencies -->
-<div class="row mt-3">
-    <div class="col-sm text-center">
-        <strong>Before Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/cartesian_impedance_controller/desired_pose @ 50Hz</p>
-    </div>
-    <div class="col-sm text-center">
-        <strong>Before Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/preprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/franka_state_controller/O_T_EE @ 607Hz</p>
-    </div>
-</div>
-
-<!-- Post-processed frequencies -->
-<div class="row mt-4">
-    <div class="col-sm text-center">
-        <strong>After Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/cartesian_impedance_controller_desired_pose_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/cartesian_impedance_controller/desired_pose @ 13Hz</p>
-    </div>
-    <div class="col-sm text-center">
-        <strong>After Sampling</strong>
-        {% include figure.liquid loading="eager" path="assets/img/postprocessed_freq/franka_state_controller_O_T_EE_hist.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>/franka_state_controller/O_T_EE @ 13Hz</p>
-    </div>
-</div>
-
-<div class="caption mt-2 text-center">
-    Frequencies of both topics are aligned after applying our sampling algorithm, from highly different original rates (50Hz vs 607Hz) to a unified 13Hz (hyperparameter).
-</div>
 
 
 **Here is the pseudo code for our sampling algorithm which ensures equal observations from all topics:**
@@ -437,41 +492,65 @@ FILE_CONTENTS {
 
 ---
 
-<!-- Training process -->
+### Learning
+
+### High Level Latent Planner
+
+
+**Dataset**
+
+For the training of the high-level latent planner, we utilize the 7 valid demonstrations obtained after post-processing and filtering. These demonstrations are randomly split into a training set and a validation set: 6 demonstrations are assigned to the training set, while the remaining 1 demonstration is reserved for validation.
+
+To train the GMM-based high-level planner, we design the input-output structure of the training data as follow git. The inputs consist of two RGB images and the current 3D hand position. Among the two images, the current image represents the present frame, while the goal image corresponds to a frame sampled from a future time step within the same demonstration. The label for each training sample is defined as the ground-truth trajectory over the subsequent 10 time steps starting from the current frame.
+
 <div class="row mt-3">
-    <div class="col-sm text-left">
-        <strong>Method</strong>
-        {% include figure.liquid loading="eager" path="assets/img/mimicplay/training.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/data.gif" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Loss curve for training low-level policy</p>
     </div>
 </div>
 
-<div class="caption mt-2 text-center">
-    Overview of MimicPlay <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
-</div>
+**Training**
 
-## High Level Latent Planner
 
-### Training
+**Setup**
 
-#### Setup
+The training was conducted following the **configuration provided in the reference paper**<d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>.
+For hyperparameters, we mainly relied on the **default settings from the official repository**[![GitHub Repo](https://img.shields.io/badge/GitHub-mimicplay-blue?logo=github)](https://github.com/j96w/MimicPlay/blob/main/mimicplay/configs/highlevel_human.json), while performing **additional tuning** based on our own dataset to improve performance, In particular, we focused on two key hyperparameters:
 
-For the collected demonstration dataset, we used **one demo as the validation set**, while the remaining demos were used for **training**. The training was conducted following the **configuration provided in the reference paper**.
-For hyperparameters, we mainly relied on the **default settings from the official repository**, while performing **additional tuning** based on our own dataset to improve performance, e.g. "goal image range" and "std".
+**goal_image_range**: defines the temporal distance between the current image and the goal image. A larger range allows the planner to consider goals further into the future, whereas a smaller range constrains the model to short-horizon predictions.
+
+**std** in GMM: corresponds to the standard deviation parameter in the Gaussian Mixture Model (GMM), which controls the smoothness and variability of the learned trajectory distribution. Adjusting this value influences how tightly the model clusters motion patterns and how much uncertainty it tolerates in trajectory generation.
+
+#### Loss Function
+
+The loss function is defined as the negative log-likelihood of the ground-truth trajectory under the distribution modeled by the Gaussian Mixture Model (GMM). Concretely, given the predicted GMM parameters at each time step, the true future trajectory is evaluated against the probability density of the mixture, and the optimization objective minimizes the negative of this log-probability.
 
 #### Evaluation
+
 We evaluated the high-level planner using two metrics:
 
 1. **GMM likelihood probability (training phase)**  
    During training, we monitored the **likelihood of the ground-truth data under the learned GMM model**. This serves as a measure of how well the model captures the distribution of the demonstrations.
 
-2. **Distance error (test phase)**  
-   On the test prompts, we computed the **distance error** between the predicted trajectories and the ground-truth hand positions. Since our high-level planner is a **probabilistic model**, we performed **multiple samples for each time step** in the sequence. The final error metric was obtained by averaging across the entire video sequence and across all samples.
+2. **Mean Squared Error(MSE)**  
+   In the subsequent testing phase, we evaluate the high-level planner by computing the distance error between the predicted trajectories and the ground-truth hand positions. Specifically, for each frame in the video, the GMM model generates 10 sampled predictions, and we take their average as the final trajectory estimate. The overall MSE is then calculated across the entire sequence to assess the effectiveness of the high-level planner.
+
+#### Training Results
+
+The training loss curves is shown as follow. From the training curves, it is evident that the model quickly falls into overfitting. Specifically, the training loss decreases rapidly in the early stages, while the validation loss starts to increase shortly thereafter. We attribute this behavior to the excessive number of modes in the Gaussian Mixture Model (GMM). An overly large number of mixture components endows the model with excessive representational capacity, enabling it to almost fully memorize the training data.
+
+<div class="row mt-3">
+    <div class="col-sm text-center">
+        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/single_view_loss.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Loss curve for training high-level planner</p>
+    </div>
+</div>
 
 
 
 
-
-## Low Level Policy
+### Low Level Policy
 
 
 During **training**, the low-level policy receives a latent embedding of the robot’s trajectory from the high-level latent planner. This embedding provides rich contextual information, significantly reducing the need for large amounts of teleoperation data.
@@ -540,48 +619,88 @@ In the original paper, the robot policy operated at 17 Hz. However, our ZED came
 </div>
 
 <div class="caption mt-2 text-center">
-    The low-level policy receives a latent plan, image observations, and proprioceptive inputs, then samples an action from a multimodal Gaussian distribution. <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>
+    The latent planner takes the current observation and a goal image (from the human prompt) to generate a latent trajectory plan. The low-level policy then combines this latent plan with image observations and proprioceptive inputs to sample actions from a GMM, whose parameters are determined by a GPT model followed by an MLP layer <d-cite key="wang2023mimicplaylonghorizonimitationlearning"></d-cite>.
 </div>
 
 
-# Differences in the original Setup and our Setup
+### Experiments
+
+#### High Level Planner
+
+Based on the implementation details described earlier, we trained the high-level planner using the processed human play dataset. After configuring the model and hyperparameters as specified in the Implementation section, we obtained the test results, which are reported below.
 
 
+#### Test Results
 
-## Experiments
+We evaluated the trained high-level planner on a set of newly collected prompts. For each prompt, we computed the Mean Squared Error (MSE) between the predicted trajectories and the ground-truth hand trajectories. In addition, we visualized the predicted trajectories for each frame alongside the corresponding ground-truth trajectories, providing an intuitive comparison of the model's performance. The predicted trajectories are mean trajectories of sampled 10 times from GMM.
 
-### High Level Planner
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+      <!-- <h5>Human Prompts</h5> -->
+      <p>Prompt 0</p>
+        {% include video.liquid path="assets/video/high_level/single_view/single_views_demo_3_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+       <!-- <h5>Robot Policy Acting</h5> -->
+       <p>Prompt 1</p>
+        {% include video.liquid path="assets/video/high_level/single_view/single_views_demo_4_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+</div>
+<div class="caption text-center">
+  The visualization of high level planner with single view images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner.
+  For the predicted trajectory, the color gradually fades with increasing time steps, indicating the temporal progression of the plan.
+</div>
 
-After completing the training of the high-level latent planner, we first collected **video prompts** and performed a **visual inspection of the predicted trajectories**. This step allowed us to qualitatively evaluate whether the generated trajectories aligned with the expected task goals and to compare them against the ground-truth trajectories from the demonstrations. Below we show example visualizations of the predicted trajectories。
+#### Improvements - Further hyperparameter tuning (Learning)
+
+The results presented above indicate that the initial performance of the high-level planner was not fully satisfactory. To address this, we conducted further experiments using **two-view video data** as input, allowing the model to benefit from richer visual observations.
+
+In addition, after training the low-level policy, we realized that the choice of hyperparameters should be considered in relation to the overall system rather than in isolation. Specifically, for the high-level planner, we argue that the **hand motion speed** in human demonstrations should be better aligned with the robot motion speed in the low-level policy to ensure consistency across layers.
+
+Given that our task trajectories are relatively simple, we also reduced the **number of GMM modes** to avoid overly complex distribution estimation. Under these revised settings, we re-collected a new set of human play data and corresponding prompts for testing. The new training results are reported below.
+
+As shown in the figure, both the training loss curves and the mean squared error (MSE) exhibit substantial improvements compared to the previous training results. This demonstrates that the revised settings not only alleviate overfitting but also lead to more stable optimization and better overall model performance. Moreover, in the trajectory visualizations of the high-level planner, the results are also noticeably better than those obtained in the previous setting, indicating clearer and more consistent planning behavior.
 
 <div class="row mt-4">
     <div class="col-sm text-center">
         <!-- <strong>After Sampling</strong> -->
-        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/start_with_traj.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>current states of hand with 10 steps future trajectory</p>
+        {% include figure.liquid loading="eager" path="assets/img/high_level/two_views_traj/bi_views_loss.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Training loss with new configuration</p>
     </div>
+</div>
+
+  <div class="row mt-4">
     <div class="col-sm text-center">
         <!-- <strong>After Sampling</strong> -->
-        {% include figure.liquid loading="eager" path="assets/img/high_level/single_view/goal.png" class="img-fluid rounded z-depth-1" zoomable=true %}
-        <p>goal states of hand</p>
+        {% include figure.liquid loading="eager" path="assets/img/high_level/box_plot.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+        <p>Comparison between previews model and new model</p>
     </div>
 </div>
 
 <div class="row mt-3">
-  <div class="col-sm mt-3 mt-md-0 text-center">
-    {% include video.liquid path="assets/video/high_level/single_view/traj_video.mp4" class="img-fluid rounded z-depth-1" controls=true autoplay=true %}
-  </div>
+    <div class="col-sm mt-3 mt-md-0">
+      <!-- <h5>Human Prompts</h5> -->
+      <p>Prompt 2</p>
+        {% include video.liquid path="assets/video/high_level/two_views/bi_views_demo_0_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+       <!-- <h5>Robot Policy Acting</h5> -->
+       <p>Prompt 3</p>
+        {% include video.liquid path="assets/video/high_level/two_views/bi_views_demo_1_h264.mp4" class="img-fluid rounded z-depth-1" controls=true %}
+    </div>
 </div>
 <div class="caption text-center">
-  trajectory through time steps
+  The visualization of high level planner with two views images. The Green line indicates ground truth trajectory. The blue line indicates predicted by high level planner.
+  For the predicted trajectory, the color gradually fades with increasing time steps, indicating the temporal progression of the plan.
 </div>
+
 
 
 ### Low-Level Policy — Policy Controller (Live System)
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-PolicyController-blue?logo=github)](https://github.com/AnshPrakash/franka_teleop/blob/robot-policy/scripts/policy_controller.py)
 
-Below we present our evaluation results for the low-level policy. Although the success rate was 0%, we have developed a solid understanding of the underlying reasons for this outcome.
+**Multi-Stage Success Evaluation.** We evaluated the low-level policy using a three-stage success metric: (1) grasping the target object, (2) reaching the designated drop location, and (3) placing the object correctly. The policy achieved a 0% success rate at the first stage, which consequently led to failure in the subsequent stages. Nonetheless, we have clear insights into understanding of the underlying causes.
 
 Here is our evaluation video results:
 
@@ -618,24 +737,28 @@ Here is our evaluation video results:
 
 
 <div class="caption">
-    Left: Human prompts, Right: Robot policy acting
+    Robot policy consistently follows the same path regardless of the human prompt, indicating overtraining. While the best-epoch model showed more variation, their movements were too erratic to safely evaluate on the real robot
 </div>
 
 
-### Key Limitations Observed
+##### Key Limitations Observed
 
 1. **High-Level Planner — Poor Embedding Quality**
 
-   * We found that the high-level planner produced **high prediction errors** for trajectories, which resulted in **poor latent embeddings**.
-   * Through hyperparameter tuning, we discovered that our dataset required **fewer modes** for accurate trajectory prediction.
-   * Due to these weak embeddings, the low-level policy experienced **high variance between similar trajectories**, preventing it from fully leveraging the advantages of human guidance.
+   * We found that the high-level planner produced **high prediction errors** for trajectories, which possibly resulted in **poor latent embeddings**.
+   * Through hyperparameter tuning, we discovered that our dataset required **fewer modes**(num_mode = 2 worked the best for two views high level latent planner)  for accurate trajectory prediction.
+   * Due to these weak embeddings, the low-level policy suffered from **poor representations** (see MSE error of the single-view high-level planner), which prevented it from fully leveraging the benefits of human guidance.
 
 2. **Absence of Wrist Camera**
 
    * There was a significant **distribution shift** between training and evaluation image inputs from the front and back cameras.
-   * The original authors used a **wrist-mounted camera**, which helped stabilize the robot policy.
+   * The original authors used a **wrist-mounted camera** to help stabilize the robot policy. However, we could not include one in our setup due to **shared robot setup with another group**.
    * Adding a wrist camera in our setup would likely **reduce distribution shift** and improve performance—**provided that a robust latent embedding of the human prompt is available**.
 
+3. **Human playdata collection** We observed that keeping our hands consistently within the camera frame is crucial; otherwise, the training data becomes corrupted with noisy trajectories.
+
+
+**Additionally, Lab Constraints**: The robot became unavailable at a certain point, which limited our ability to re-evaluate the low-level policy with the improved high-level planner and prevented a fully iterative process.
 
 
 ---
@@ -659,7 +782,7 @@ Only minor changes to the model are required to enable it for a bimanual scenari
 
 # Conclusion
 
-
+MimicPlay demonstrates how to leverage inexpensive human play data alongside limited robot demonstrations, opening the door to scalable imitation learning from internet-scale datasets. The framework exploits the complementary strengths of both sources: human play data trains the high-level controller to produce goal-conditioned latent plans by predicting future 3D hand trajectories, while robot demonstrations guide the low-level controller in translating these plans into executable actions. Building on this idea, we replicated MimicPlay on the Franka Emika Panda arm and developed a full pipeline for collecting and processing both human play data and teleoperated demonstrations. While our high-level planner trained successfully, we were unable to properly train the low-level policy due to early hyperparameter tuning errors. Finally, we outlined directions for extending MimicPlay to dual-arm systems, paving the way for tackling more complex manipulation tasks.
 
 ---
 
