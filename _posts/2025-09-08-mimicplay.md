@@ -613,7 +613,7 @@ Here is our evaluation video results:
 
 
 <div class="caption">
-    Robot policy consistently follows the same path regardless of the human prompt, indicating overtraining. While earlier-epoch models showed more variation, their movements were too erratic to safely evaluate on the real robot.
+    Robot policy consistently follows the same path regardless of the human prompt, indicating overtraining. While the best-epoch model showed more variation, their movements were too erratic to safely evaluate on the real robot
 </div>
 
 
