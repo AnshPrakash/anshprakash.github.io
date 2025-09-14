@@ -780,7 +780,7 @@ Only minor changes to the model are required to enable it for a bimanual scenari
 
 # Conclusion
 
-
+MimicPlay demonstrates how to leverage inexpensive human play data alongside limited robot demonstrations, opening the door to scalable imitation learning from internet-scale datasets. The framework exploits the complementary strengths of both sources: human play data trains the high-level controller to produce goal-conditioned latent plans by predicting future 3D hand trajectories, while robot demonstrations guide the low-level controller in translating these plans into executable actions. Building on this idea, we replicated MimicPlay on the Franka Emika Panda arm and developed a full pipeline for collecting and processing both human play data and teleoperated demonstrations. While our high-level planner trained successfully, we were unable to properly train the low-level policy due to early hyperparameter tuning errors. Finally, we outlined directions for extending MimicPlay to dual-arm systems, paving the way for tackling more complex manipulation tasks.
 
 ---
 
